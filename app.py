@@ -158,37 +158,22 @@ MOT_DE_PASSE_PROF = "prof2024"
 # ════════════════════════════════════════════════════════════
 
 def get_supabase():
-    """Initialise le client Supabase depuis les secrets Streamlit ou les env vars."""
+    """Initialise le client Supabase."""
     try:
         from supabase import create_client
     except ImportError:
         st.error("❌ `pip install supabase` requis pour la persistance.")
         return None
 
-    # --- Lecture des secrets ---
-    url = ""
-    key = ""
+    # ── Identifiants Supabase (à remplir) ──
+    url = "https://gbsdkpvnogyqkbiuhhzd.supabase.co"
+    key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdic2RrcHZub2d5cWtiaXVoaHpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQxMjMxMTAsImV4cCI6MjEwOTY5OTExMH0.eCG0FVJltao6KyUey5EPV-NrDiq0idpKzWTmGtvQG5Y"
 
-    # 1) Essayer st.secrets (Streamlit Cloud)
-    try:
-        url = st.secrets["SUPABASE_URL"]
-        key = st.secrets["SUPABASE_KEY"]
-    except Exception:
-        pass
-
-    # 2) Fallback sur les variables d'environnement (local)
-    if not url:
-        url = os.environ.get("SUPABASE_URL", "")
-    if not key:
-        key = os.environ.get("SUPABASE_KEY", "")
-
-    if not url or not key:
+    if "COLLE_TON" in url or "COLLE_TON" in key:
         return None
 
-    # --- Connexion ---
     try:
-        client = create_client(url, key)
-        return client
+        return create_client(url, key)
     except Exception as e:
         st.error(f"❌ Erreur connexion Supabase : {e}")
         return None
@@ -486,25 +471,7 @@ def main():
         if sb_ok:
             st.success("🗄️ Base de données OK")
         else:
-            # Debug : afficher les clés détectées
-            _dbg_url = ""
-            _dbg_key = ""
-            try:
-                _dbg_url = st.secrets["SUPABASE_URL"]
-            except Exception as _e1:
-                _dbg_url = f"ERREUR: {_e1}"
-            try:
-                _dbg_key = st.secrets["SUPABASE_KEY"]
-            except Exception as _e2:
-                _dbg_key = f"ERREUR: {_e2}"
             st.warning("🗄️ Supabase non configuré — mode local")
-            with st.expander("🔍 Debug Supabase"):
-                st.text(f"URL: {_dbg_url[:30]}..." if len(str(_dbg_url)) > 30 else f"URL: {_dbg_url}")
-                st.text(f"KEY: {_dbg_key[:20]}..." if len(str(_dbg_key)) > 20 else f"KEY: {_dbg_key}")
-                try:
-                    st.text(f"Secrets dispo: {list(st.secrets.keys())}")
-                except Exception as _e3:
-                    st.text(f"st.secrets inaccessible: {_e3}")
 
         st.divider()
 
