@@ -13,6 +13,7 @@ Nécessite :
 import streamlit as st
 import json
 import os
+import re
 from datetime import datetime
 from groq import Groq
 
@@ -79,6 +80,9 @@ ou à la demande de l'élève.
 
 # 8. Format des échanges
 Utilise du Markdown simple et du LaTeX pour les expressions mathématiques.
+IMPORTANT : utilise uniquement les délimiteurs $ ... $ pour les formules
+en ligne et $$ ... $$ pour les formules centrées. N'utilise JAMAIS
+\\( \\) ni \\[ \\] ni \\displaystyle.
 Affiche uniquement les rubriques utiles :
 « Objectif », « Exercice », « Retour » ou « Prochaine étape ».
 Ne répète pas toutes les rubriques à chaque message.
@@ -269,6 +273,24 @@ def resume_historique(sessions):
             lignes.append(f"Bilan : {bilan}")
     lignes.append("--- FIN HISTORIQUE ---\n")
     return "\n".join(lignes)
+
+
+# ════════════════════════════════════════════════════════════
+# 🔤  FORMATAGE LATEX
+# ════════════════════════════════════════════════════════════
+
+def fix_latex(text):
+    """Convertit les délimiteurs LaTeX pour que Streamlit les affiche correctement."""
+    # \[ ... \]  →  $$ ... $$
+    text = re.sub(r'\\\[\s*', '\n$$\n', text)
+    text = re.sub(r'\s*\\\]', '\n$$\n', text)
+    # \( ... \)  →  $ ... $
+    text = re.sub(r'\\\(\s*', ' $', text)
+    text = re.sub(r'\s*\\\)', '$ ', text)
+    # \displaystyle (inutile en mode $$ de Streamlit)
+    text = text.replace(r'\displaystyle ', '')
+    text = text.replace(r'\displaystyle', '')
+    return text
 
 
 # ════════════════════════════════════════════════════════════
@@ -753,7 +775,7 @@ def main():
         if i == 1 and msg["role"] == "user" and "Commence le diagnostic" in msg.get("content", ""):
             continue
         with st.chat_message(msg["role"], avatar="🎓" if msg["role"] == "assistant" else "🧑‍🎓"):
-            st.markdown(msg["content"])
+            st.markdown(fix_latex(msg["content"]))
 
     # ── Input élève ───────────────────────────────────────────
 
@@ -770,7 +792,7 @@ def main():
             with st.spinner("Réflexion..."):
                 reponse = appel_tuteur(st.session_state.messages)
 
-            st.markdown(reponse)
+            st.markdown(fix_latex(reponse))
             st.session_state.messages.append({"role": "assistant", "content": reponse})
 
             reponse_lower = reponse.lower()
