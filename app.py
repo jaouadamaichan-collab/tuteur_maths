@@ -3,11 +3,6 @@
 🎓 Tuteur de Maths IA — Application Streamlit + Supabase
 Parcours personnalisé : diagnostic → entraînement → bilan
 Avec suivi persistant et tableau de bord professeur.
-
-Nécessite :
-  pip install streamlit anthropic supabase
-  Configurer les secrets Streamlit (voir README)
-  streamlit run app.py
 """
 
 import streamlit as st
@@ -153,20 +148,219 @@ PAYS_PROGRAMMES = [
     "Autre (je préciserai)",
 ]
 
-# Mot de passe pour accéder au tableau de bord prof
 MOT_DE_PASSE_PROF = "prof2024"
 
 
 # ════════════════════════════════════════════════════════════
-# 🗄️  SUPABASE — Persistance des données
+# 🎨  CSS GLOBAL
+# ════════════════════════════════════════════════════════════
+
+CSS = """
+<style>
+/* ── Reset & base ─────────────────────────────────────── */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #1e3a5f 0%, #0f2440 100%);
+}
+[data-testid="stSidebar"] * {
+    color: #e2e8f0 !important;
+}
+[data-testid="stSidebar"] .stSelectbox label,
+[data-testid="stSidebar"] .stTextInput label,
+[data-testid="stSidebar"] .stTextArea label {
+    color: #94a3b8 !important;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+[data-testid="stSidebar"] .stSelectbox > div > div,
+[data-testid="stSidebar"] .stTextInput > div > div > input,
+[data-testid="stSidebar"] .stTextArea > div > div > textarea {
+    background: rgba(255,255,255,0.08) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    color: #f1f5f9 !important;
+    border-radius: 0.5rem;
+}
+[data-testid="stSidebar"] hr {
+    border-color: rgba(255,255,255,0.1) !important;
+}
+
+/* ── Hero ──────────────────────────────────────────────── */
+.hero {
+    text-align: center;
+    padding: 2rem 1rem 1rem;
+}
+.hero h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #1e3a5f, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.3rem;
+}
+.hero .subtitle {
+    color: #64748b;
+    font-size: 1rem;
+    font-weight: 400;
+}
+
+/* ── Cartes d'accueil ─────────────────────────────────── */
+.welcome-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    height: 100%;
+}
+.welcome-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+}
+.welcome-card .icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+.welcome-card h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.4rem;
+}
+.welcome-card p {
+    font-size: 0.85rem;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+/* ── Phase badges ─────────────────────────────────────── */
+.phase-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 1rem;
+    border-radius: 0.8rem;
+    margin-bottom: 0.5rem;
+}
+.phase-diagnostic {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border: 1px solid #f59e0b;
+}
+.phase-entrainement {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    border: 1px solid #3b82f6;
+}
+.phase-bilan {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    border: 1px solid #10b981;
+}
+.phase-bar .phase-icon { font-size: 1.3rem; }
+.phase-bar .phase-label {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #1e293b;
+}
+.phase-bar .phase-detail {
+    font-size: 0.8rem;
+    color: #475569;
+    margin-left: auto;
+}
+
+/* ── Stats en session ─────────────────────────────────── */
+.stats-row {
+    display: flex;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+}
+.stat-pill {
+    flex: 1;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.7rem;
+    padding: 0.6rem 0.8rem;
+    text-align: center;
+}
+.stat-pill .val {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #1e3a5f;
+}
+.stat-pill .lbl {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ── Chat bubbles ─────────────────────────────────────── */
+[data-testid="stChatMessage"] {
+    border-radius: 1rem !important;
+    margin-bottom: 0.8rem !important;
+    border: none !important;
+    padding: 1rem 1.2rem !important;
+}
+
+/* ── Bouton d'accueil ─────────────────────────────────── */
+.start-hint {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #94a3b8;
+    font-size: 0.95rem;
+}
+.start-hint .arrow { font-size: 1.5rem; }
+
+/* ── Historique cards ─────────────────────────────────── */
+.history-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.8rem;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+}
+.history-card .date {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+.history-card .chapter {
+    font-weight: 600;
+    color: #1e293b;
+}
+.history-card .detail {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+/* ── Dashboard prof ───────────────────────────────────── */
+.dash-metric {
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    border: 1px solid #bae6fd;
+    border-radius: 1rem;
+    padding: 1.2rem;
+    text-align: center;
+}
+.dash-metric .number {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #0369a1;
+}
+.dash-metric .label {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 0.2rem;
+}
+</style>
+"""
+
+
+# ════════════════════════════════════════════════════════════
+# 🗄️  SUPABASE
 # ════════════════════════════════════════════════════════════
 
 def get_supabase():
-    """Initialise le client Supabase."""
     try:
         from supabase import create_client
     except ImportError:
-        st.error("❌ `pip install supabase` requis pour la persistance.")
         return None
 
     # ── Identifiants Supabase (à remplir) ──
@@ -175,63 +369,51 @@ def get_supabase():
 
     if "COLLE_TON" in url or "COLLE_TON" in key:
         return None
-
     try:
         return create_client(url, key)
-    except Exception as e:
-        st.error(f"❌ Erreur connexion Supabase : {e}")
+    except Exception:
         return None
 
 
 def sauvegarder_session_db(profil, messages, nb_exercices, phase, bilan=""):
-    """Sauvegarde une séance dans Supabase."""
     sb = get_supabase()
     if not sb:
         return False
-
     msgs = [
         {"role": m["role"], "content": m["content"]}
-        for m in messages
-        if m["role"] != "system"
+        for m in messages if m["role"] != "system"
     ]
-
     data = {
-        "eleve_nom":    profil.get("nom", "Élève"),
-        "classe":       profil.get("classe", ""),
-        "programme":    profil.get("programme", ""),
-        "chapitre":     profil.get("chapitre", ""),
-        "objectif":     profil.get("objectif", ""),
-        "temps":        profil.get("temps", ""),
+        "eleve_nom": profil.get("nom", "Élève"),
+        "classe": profil.get("classe", ""),
+        "programme": profil.get("programme", ""),
+        "chapitre": profil.get("chapitre", ""),
+        "objectif": profil.get("objectif", ""),
+        "temps": profil.get("temps", ""),
         "nb_exercices": nb_exercices,
-        "nb_echanges":  len([m for m in msgs if m["role"] == "user"]),
+        "nb_echanges": len([m for m in msgs if m["role"] == "user"]),
         "phase_finale": phase,
-        "bilan":        bilan,
-        "messages":     json.dumps(msgs, ensure_ascii=False),
+        "bilan": bilan,
+        "messages": json.dumps(msgs, ensure_ascii=False),
         "date_session": datetime.now().isoformat(),
     }
-
     try:
         sb.table("sessions").insert(data).execute()
         return True
-    except Exception as e:
-        st.error(f"Erreur sauvegarde : {str(e)[:120]}")
+    except Exception:
         return False
 
 
 def charger_sessions_db(nom):
-    """Charge les séances précédentes d'un élève depuis Supabase."""
     sb = get_supabase()
     if not sb:
         return []
-
     try:
         resp = (
-            sb.table("sessions")
-            .select("*")
+            sb.table("sessions").select("*")
             .eq("eleve_nom", nom)
             .order("date_session", desc=True)
-            .limit(10)
-            .execute()
+            .limit(10).execute()
         )
         return resp.data or []
     except Exception:
@@ -239,18 +421,15 @@ def charger_sessions_db(nom):
 
 
 def charger_tous_eleves_db():
-    """Charge la liste de tous les élèves et leurs stats (vue prof)."""
     sb = get_supabase()
     if not sb:
         return []
-
     try:
         resp = (
             sb.table("sessions")
             .select("eleve_nom, classe, chapitre, nb_exercices, phase_finale, bilan, date_session")
             .order("date_session", desc=True)
-            .limit(200)
-            .execute()
+            .limit(200).execute()
         )
         return resp.data or []
     except Exception:
@@ -258,7 +437,6 @@ def charger_tous_eleves_db():
 
 
 def resume_historique(sessions):
-    """Résume l'historique pour l'injecter dans le contexte du LLM."""
     if not sessions:
         return ""
     lignes = ["\n--- HISTORIQUE DES SÉANCES PRÉCÉDENTES ---"]
@@ -280,14 +458,10 @@ def resume_historique(sessions):
 # ════════════════════════════════════════════════════════════
 
 def fix_latex(text):
-    """Convertit les délimiteurs LaTeX pour que Streamlit les affiche correctement."""
-    # \[ ... \]  →  $$ ... $$
     text = re.sub(r'\\\[\s*', '\n$$\n', text)
     text = re.sub(r'\s*\\\]', '\n$$\n', text)
-    # \( ... \)  →  $ ... $
     text = re.sub(r'\\\(\s*', ' $', text)
     text = re.sub(r'\s*\\\)', '$ ', text)
-    # \displaystyle (inutile en mode $$ de Streamlit)
     text = text.replace(r'\displaystyle ', '')
     text = text.replace(r'\displaystyle', '')
     return text
@@ -298,7 +472,6 @@ def fix_latex(text):
 # ════════════════════════════════════════════════════════════
 
 def get_api_key():
-    """Récupère la clé API Anthropic depuis les secrets Streamlit."""
     try:
         return st.secrets["ANTHROPIC_API_KEY"]
     except Exception:
@@ -306,14 +479,11 @@ def get_api_key():
 
 
 def appel_tuteur(messages):
-    """Appel à Claude avec le contexte complet."""
     api_key = get_api_key()
     if not api_key:
-        return "⚠️ Clé API Claude manquante. Configure-la dans la barre latérale."
+        return "⚠️ Clé API manquante."
 
     client = Anthropic(api_key=api_key)
-
-    # Séparer le system prompt des messages (format Claude API)
     system_prompt = ""
     chat_messages = []
     for msg in messages:
@@ -321,7 +491,6 @@ def appel_tuteur(messages):
             system_prompt = msg["content"]
         else:
             chat_messages.append({"role": msg["role"], "content": msg["content"]})
-
     try:
         response = client.messages.create(
             model="claude-haiku-4-5-20251001",
@@ -331,15 +500,10 @@ def appel_tuteur(messages):
         )
         return response.content[0].text.strip()
     except Exception as e:
-        return f"❌ Erreur Claude : {str(e)[:200]}"
+        return f"❌ Erreur : {str(e)[:200]}"
 
-
-# ════════════════════════════════════════════════════════════
-# 🏗️  CONSTRUCTION DU CONTEXTE
-# ════════════════════════════════════════════════════════════
 
 def construire_contexte_initial(profil, historique_txt=""):
-    """Construit le message système avec le profil et l'historique."""
     infos = (
         f"\n--- PROFIL ÉLÈVE ---\n"
         f"Nom/Pseudo : {profil.get('nom', 'non renseigné')}\n"
@@ -358,232 +522,168 @@ def construire_contexte_initial(profil, historique_txt=""):
 # ════════════════════════════════════════════════════════════
 
 def afficher_dashboard_prof():
-    """Page tableau de bord pour le professeur."""
-    st.markdown("## 📊 Tableau de bord — Suivi des élèves")
-
     sessions = charger_tous_eleves_db()
-
     if not sessions:
-        st.info("Aucune séance enregistrée pour le moment.")
+        st.info("📭 Aucune séance enregistrée pour le moment.")
         return
 
-    # ── Statistiques globales ─────────────────────────────────
     eleves_uniques = list({s["eleve_nom"] for s in sessions})
     total_exercices = sum(s.get("nb_exercices", 0) for s in sessions)
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("👥 Élèves", len(eleves_uniques))
-    col2.metric("📝 Séances", len(sessions))
-    col3.metric("🧮 Exercices total", total_exercices)
+    with col1:
+        st.markdown(f"""<div class="dash-metric">
+            <div class="number">{len(eleves_uniques)}</div>
+            <div class="label">Élèves</div>
+        </div>""", unsafe_allow_html=True)
+    with col2:
+        st.markdown(f"""<div class="dash-metric">
+            <div class="number">{len(sessions)}</div>
+            <div class="label">Séances</div>
+        </div>""", unsafe_allow_html=True)
+    with col3:
+        st.markdown(f"""<div class="dash-metric">
+            <div class="number">{total_exercices}</div>
+            <div class="label">Exercices</div>
+        </div>""", unsafe_allow_html=True)
 
-    st.divider()
+    st.markdown("")
 
-    # ── Filtre par élève ──────────────────────────────────────
     eleve_filtre = st.selectbox(
-        "🔍 Filtrer par élève",
-        ["Tous"] + sorted(eleves_uniques),
+        "Filtrer par élève", ["Tous les élèves"] + sorted(eleves_uniques)
     )
-
-    if eleve_filtre != "Tous":
+    if eleve_filtre != "Tous les élèves":
         sessions = [s for s in sessions if s["eleve_nom"] == eleve_filtre]
-
-    # ── Tableau des séances ───────────────────────────────────
-    st.markdown("### 📋 Historique des séances")
 
     for s in sessions:
         date = str(s.get("date_session", ""))[:16].replace("T", " à ")
         nom = s.get("eleve_nom", "?")
-        classe = s.get("classe", "?")
+        classe = s.get("classe", "")
         chapitre = s.get("chapitre", "?")
         nb_ex = s.get("nb_exercices", 0)
         phase = s.get("phase_finale", "?")
         bilan = s.get("bilan", "")
 
-        phase_emoji = {"diagnostic": "🔍", "entrainement": "🎯", "bilan": "📊"}.get(phase, "📝")
+        phase_emoji = {"diagnostic": "🔍", "entrainement": "🎯", "bilan": "✅"}.get(phase, "📝")
 
-        with st.expander(f"{phase_emoji} **{nom}** — {chapitre} · {date}"):
-            col_a, col_b, col_c = st.columns(3)
-            col_a.write(f"**Classe :** {classe}")
-            col_b.write(f"**Exercices :** {nb_ex}")
-            col_c.write(f"**Phase finale :** {phase}")
-
+        with st.expander(f"{phase_emoji}  **{nom}** · {chapitre} — {date}"):
+            st.markdown(f"**Classe :** {classe} · **Exercices :** {nb_ex} · **Phase :** {phase}")
             if bilan:
-                st.markdown("**Bilan :**")
                 st.info(bilan)
-            else:
-                st.caption("Pas de bilan enregistré pour cette séance.")
 
-    # ── Vue par élève — progression ───────────────────────────
-    if eleve_filtre != "Tous" and len(sessions) >= 2:
-        st.divider()
-        st.markdown(f"### 📈 Progression de {eleve_filtre}")
-
-        chapitres_vus = []
+    if eleve_filtre != "Tous les élèves" and len(sessions) >= 2:
+        st.markdown("---")
+        st.markdown(f"#### 📈 Progression de {eleve_filtre}")
+        rows = []
         for s in reversed(sessions):
-            ch = s.get("chapitre", "?")
-            nb = s.get("nb_exercices", 0)
-            date = str(s.get("date_session", ""))[:10]
-            chapitres_vus.append({"Date": date, "Chapitre": ch, "Exercices": nb})
-
-        st.table(chapitres_vus)
+            rows.append({
+                "Date": str(s.get("date_session", ""))[:10],
+                "Chapitre": s.get("chapitre", "?"),
+                "Exercices": s.get("nb_exercices", 0),
+            })
+        st.table(rows)
 
 
 # ════════════════════════════════════════════════════════════
-# 🎨  INTERFACE STREAMLIT — PRINCIPALE
+# 🎨  INTERFACE PRINCIPALE
 # ════════════════════════════════════════════════════════════
 
 def main():
     st.set_page_config(
-        page_title="🎓 Tuteur Maths IA",
+        page_title="Tuteur Maths IA",
         page_icon="🎓",
         layout="wide",
         initial_sidebar_state="expanded",
     )
+    st.markdown(CSS, unsafe_allow_html=True)
 
-    # CSS
-    st.markdown("""
-    <style>
-    .main-title { text-align: center; padding: 0.5rem 0 0.2rem 0; }
-    .main-title h1 { font-size: 2rem; margin-bottom: 0; }
-    .main-title p { color: #888; font-size: 0.95rem; }
-    .phase-badge {
-        display: inline-block; padding: 0.3rem 0.8rem; border-radius: 1rem;
-        font-weight: 600; font-size: 0.85rem; margin-bottom: 0.5rem;
-    }
-    .phase-diagnostic { background: #fef3c7; color: #92400e; }
-    .phase-entrainement { background: #dbeafe; color: #1e40af; }
-    .phase-bilan { background: #d1fae5; color: #065f46; }
-    .stat-card {
-        background: #f8f9fa; border-radius: 0.6rem; padding: 0.8rem;
-        text-align: center; border: 1px solid #e9ecef;
-    }
-    .stat-card .number { font-size: 1.6rem; font-weight: 700; color: #2563eb; }
-    .stat-card .label { font-size: 0.8rem; color: #6b7280; }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # ── Initialisation session state ──────────────────────────
-    defaults = {
-        "messages": [],
-        "session_active": False,
-        "profil": {},
-        "nb_exercices": 0,
-        "phase": "config",
-        "debut_session": None,
-        "page": "tuteur",
-        "prof_auth": False,
-    }
-    for k, v in defaults.items():
+    # ── Init session state ────────────────────────────────
+    for k, v in {
+        "messages": [], "session_active": False, "profil": {},
+        "nb_exercices": 0, "phase": "config", "debut_session": None,
+        "page": "tuteur", "prof_auth": False,
+    }.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
-    # Vérifier si Supabase est configuré
-    sb_test = get_supabase()
-    sb_ok = sb_test is not None
+    sb_ok = get_supabase() is not None
 
     # ══════════════════════════════════════════════════════════
-    # 📚  BARRE LATÉRALE
+    # 📚  SIDEBAR
     # ══════════════════════════════════════════════════════════
 
     with st.sidebar:
-        st.markdown("## ⚙️ Configuration")
-
-        # Clé API Claude
-        if get_api_key():
-            st.success("🔑 API Claude OK")
-        else:
-            st.error("❌ Clé API Claude manquante")
-
-        # Statut Supabase
-        if sb_ok:
-            st.success("🗄️ Base de données OK")
-        else:
-            st.warning("🗄️ Supabase non configuré — mode local")
-
+        st.markdown("# 🎓 Tuteur Maths")
+        st.caption("Ton coach de maths personnel")
         st.divider()
 
-        # Navigation
         page = st.radio(
-            "📍 Navigation",
-            ["🧑‍🎓 Séance élève", "📊 Tableau de bord prof"],
-            index=0 if st.session_state.page == "tuteur" else 1,
+            "Navigation",
+            ["🧑‍🎓  Ma séance", "📊  Espace prof"],
             label_visibility="collapsed",
         )
-        st.session_state.page = "tuteur" if "élève" in page else "prof"
+        st.session_state.page = "tuteur" if "séance" in page else "prof"
 
-        # ── Profil élève (seulement en mode tuteur) ───────────
         if st.session_state.page == "tuteur":
             st.divider()
-            st.markdown("## 👤 Profil élève")
 
-            nom = st.text_input("Nom / Pseudo", placeholder="Ex: Sarah")
-            programme = st.selectbox("📍 Programme scolaire", PAYS_PROGRAMMES)
+            nom = st.text_input("👤 Ton prénom", placeholder="Ex: Sarah")
+            programme = st.selectbox("🌍 Programme", PAYS_PROGRAMMES)
             classe = st.selectbox("📚 Classe", list(CHAPITRES.keys()))
             chapitres_dispo = CHAPITRES.get(classe, ["Autre"])
             chapitre = st.selectbox("📖 Chapitre", chapitres_dispo)
             objectif = st.text_area(
-                "🎯 Objectif de la séance",
-                placeholder="Ex: Comprendre la dérivation d'un produit",
+                "🎯 Objectif", placeholder="Ex: Comprendre la dérivation",
                 height=68,
             )
             temps = st.select_slider(
-                "⏱️ Temps disponible",
+                "⏱️ Durée",
                 options=["15 min", "30 min", "45 min", "1h", "1h30", "2h"],
                 value="30 min",
             )
 
-            # Historique
             if sb_ok and nom:
                 sessions_passees = charger_sessions_db(nom)
                 if sessions_passees:
-                    st.info(f"📂 {len(sessions_passees)} séance(s) précédente(s)")
+                    st.caption(f"📂 {len(sessions_passees)} séance(s) trouvée(s)")
             else:
                 sessions_passees = []
 
             st.divider()
 
-            # Boutons
-            col1, col2 = st.columns(2)
-            with col1:
+            if not st.session_state.session_active:
                 btn_start = st.button(
-                    "▶️ Démarrer" if not st.session_state.session_active else "🔄 Relancer",
+                    "🚀 Commencer la séance",
                     use_container_width=True, type="primary",
                 )
-            with col2:
-                btn_bilan = st.button(
-                    "📊 Bilan", use_container_width=True,
-                    disabled=not st.session_state.session_active,
-                )
+                btn_bilan = False
+            else:
+                col1, col2 = st.columns(2)
+                with col1:
+                    btn_start = st.button("🔄 Relancer", use_container_width=True)
+                with col2:
+                    btn_bilan = st.button("📊 Bilan", use_container_width=True, type="primary")
 
-            if st.session_state.session_active:
                 if st.button("💾 Sauvegarder", use_container_width=True):
                     if sb_ok:
-                        ok = sauvegarder_session_db(
+                        if sauvegarder_session_db(
                             st.session_state.profil,
                             st.session_state.messages,
                             st.session_state.nb_exercices,
                             st.session_state.phase,
-                        )
-                        if ok:
-                            st.success("✅ Séance sauvegardée !")
-                    else:
-                        st.warning("Supabase non configuré.")
+                        ):
+                            st.success("✅ Sauvegardé !")
 
                 if st.button("🗑️ Nouvelle séance", use_container_width=True):
-                    st.session_state.messages = []
-                    st.session_state.session_active = False
-                    st.session_state.nb_exercices = 0
-                    st.session_state.phase = "config"
-                    st.session_state.debut_session = None
+                    for k in ["messages", "session_active", "nb_exercices", "phase", "debut_session"]:
+                        st.session_state[k] = {"messages": [], "session_active": False,
+                                               "nb_exercices": 0, "phase": "config",
+                                               "debut_session": None}[k]
                     st.rerun()
         else:
             btn_start = False
             btn_bilan = False
-            nom = ""
-            classe = ""
-            programme = ""
-            chapitre = ""
-            objectif = ""
+            nom = classe = programme = chapitre = objectif = ""
             temps = "30 min"
             sessions_passees = []
 
@@ -592,54 +692,47 @@ def main():
     # ══════════════════════════════════════════════════════════
 
     if st.session_state.page == "prof":
-        st.markdown("""
-        <div class="main-title">
-            <h1>🎓 Tuteur de Maths IA</h1>
-            <p>Tableau de bord professeur</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("""<div class="hero">
+            <h1>📊 Espace Professeur</h1>
+            <div class="subtitle">Suivi et progression des élèves</div>
+        </div>""", unsafe_allow_html=True)
 
         if not sb_ok:
-            st.warning("Le tableau de bord nécessite Supabase. Voir le README pour la configuration.")
+            st.warning("Le tableau de bord nécessite la base de données.")
             return
 
-        # Authentification simple
         if not st.session_state.prof_auth:
-            mdp_attendu = (
-                st.secrets.get("MOT_DE_PASSE_PROF", MOT_DE_PASSE_PROF)
-                if hasattr(st, "secrets") and "MOT_DE_PASSE_PROF" in st.secrets
-                else os.environ.get("MOT_DE_PASSE_PROF", MOT_DE_PASSE_PROF)
-            )
-            mdp = st.text_input("🔒 Mot de passe professeur", type="password")
-            if mdp:
-                if mdp == mdp_attendu:
-                    st.session_state.prof_auth = True
-                    st.rerun()
-                else:
-                    st.error("Mot de passe incorrect.")
+            mdp_attendu = MOT_DE_PASSE_PROF
+            try:
+                mdp_attendu = st.secrets["MOT_DE_PASSE_PROF"]
+            except Exception:
+                mdp_attendu = os.environ.get("MOT_DE_PASSE_PROF", MOT_DE_PASSE_PROF)
+
+            st.markdown("")
+            col_l, col_c, col_r = st.columns([1, 2, 1])
+            with col_c:
+                mdp = st.text_input("🔒 Mot de passe", type="password",
+                                     placeholder="Entrez le mot de passe prof")
+                if mdp:
+                    if mdp == mdp_attendu:
+                        st.session_state.prof_auth = True
+                        st.rerun()
+                    else:
+                        st.error("Mot de passe incorrect.")
             return
 
         afficher_dashboard_prof()
         return
 
     # ══════════════════════════════════════════════════════════
-    # 🧑‍🎓  PAGE ÉLÈVE — Tuteur
+    # 🧑‍🎓  PAGE ÉLÈVE
     # ══════════════════════════════════════════════════════════
 
-    st.markdown("""
-    <div class="main-title">
-        <h1>🎓 Tuteur de Maths IA</h1>
-        <p>Diagnostic · Entraînement ciblé · Bilan personnalisé</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # ── Lancement de session ──────────────────────────────────
-
+    # ── Lancement ─────────────────────────────────────────
     if btn_start:
         profil = {
             "nom": nom or "Élève",
-            "classe": classe,
-            "programme": programme,
+            "classe": classe, "programme": programme,
             "chapitre": chapitre,
             "objectif": objectif or "Réviser et progresser",
             "temps": temps,
@@ -652,12 +745,9 @@ def main():
 
         historique_txt = resume_historique(sessions_passees)
         contexte = construire_contexte_initial(profil, historique_txt)
+        st.session_state.messages = [{"role": "system", "content": contexte}]
 
-        st.session_state.messages = [
-            {"role": "system", "content": contexte},
-        ]
-
-        with st.spinner("Le tuteur prépare le diagnostic..."):
+        with st.spinner("🧠 Préparation du diagnostic..."):
             premier_msg = (
                 f"Bonjour ! Je suis prêt pour une séance de {temps} "
                 f"sur le chapitre « {chapitre} » en {classe}. "
@@ -669,111 +759,101 @@ def main():
             st.session_state.messages.append({"role": "assistant", "content": reponse})
         st.rerun()
 
-    # ── Demande de bilan ──────────────────────────────────────
-
+    # ── Bilan ─────────────────────────────────────────────
     if btn_bilan and st.session_state.session_active:
         st.session_state.messages.append(
             {"role": "user", "content": "Peux-tu me faire un bilan de cette séance ?"}
         )
-        with st.spinner("Génération du bilan..."):
+        with st.spinner("📊 Génération du bilan..."):
             reponse = appel_tuteur(st.session_state.messages)
             st.session_state.messages.append({"role": "assistant", "content": reponse})
-
         st.session_state.phase = "bilan"
-
-        # Sauvegarde automatique du bilan
         if sb_ok:
             sauvegarder_session_db(
-                st.session_state.profil,
-                st.session_state.messages,
-                st.session_state.nb_exercices,
-                "bilan",
-                bilan=reponse,
+                st.session_state.profil, st.session_state.messages,
+                st.session_state.nb_exercices, "bilan", bilan=reponse,
             )
-
         st.rerun()
 
-    # ── Écran d'accueil ───────────────────────────────────────
-
+    # ── Écran d'accueil ───────────────────────────────────
     if not st.session_state.session_active:
-        st.markdown("---")
+        st.markdown("""<div class="hero">
+            <h1>🎓 Tuteur de Maths IA</h1>
+            <div class="subtitle">Ton parcours personnalisé pour progresser en maths</div>
+        </div>""", unsafe_allow_html=True)
+
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.markdown("""
-            ### 🔍 Diagnostic
-            3 exercices rapides pour identifier
-            tes acquis et tes points à travailler.
-            """)
+            st.markdown("""<div class="welcome-card">
+                <div class="icon">🔍</div>
+                <h3>Diagnostic</h3>
+                <p>3 exercices rapides pour identifier tes acquis et tes points à travailler.</p>
+            </div>""", unsafe_allow_html=True)
         with col2:
-            st.markdown("""
-            ### 🎯 Entraînement
-            Des exercices adaptés à ton niveau,
-            avec indices et corrections détaillées.
-            """)
+            st.markdown("""<div class="welcome-card">
+                <div class="icon">🎯</div>
+                <h3>Entraînement</h3>
+                <p>Des exercices adaptés à ton niveau, avec des indices et des corrections.</p>
+            </div>""", unsafe_allow_html=True)
         with col3:
-            st.markdown("""
-            ### 📊 Bilan
-            Un résumé de tes progrès,
-            acquis et prochaines étapes.
-            """)
+            st.markdown("""<div class="welcome-card">
+                <div class="icon">📊</div>
+                <h3>Bilan</h3>
+                <p>Un résumé de tes progrès avec tes acquis et tes prochaines étapes.</p>
+            </div>""", unsafe_allow_html=True)
 
-        # Afficher les séances passées si disponibles
         if sessions_passees:
-            st.markdown("---")
-            st.markdown("### 📂 Tes séances précédentes")
-            for s in sessions_passees[:5]:
+            st.markdown("")
+            st.markdown("#### 📂 Tes dernières séances")
+            for s in sessions_passees[:3]:
                 date = str(s.get("date_session", ""))[:10]
                 ch = s.get("chapitre", "?")
                 nb = s.get("nb_exercices", 0)
                 bilan = s.get("bilan", "")
-                with st.expander(f"📅 {date} — {ch} · {nb} exercices"):
-                    if bilan:
+                st.markdown(f"""<div class="history-card">
+                    <span class="date">📅 {date}</span><br>
+                    <span class="chapter">{ch}</span>
+                    <span class="detail"> · {nb} exercices</span>
+                </div>""", unsafe_allow_html=True)
+                if bilan:
+                    with st.expander("Voir le bilan"):
                         st.info(bilan)
-                    else:
-                        st.caption("Pas de bilan.")
 
-        st.markdown("---")
-        st.info("👈 Configure ton profil dans la barre latérale puis clique sur **Démarrer**.")
+        st.markdown("""<div class="start-hint">
+            <div class="arrow">👈</div>
+            Remplis ton profil dans le panneau à gauche, puis clique sur
+            <strong>Commencer la séance</strong>
+        </div>""", unsafe_allow_html=True)
         return
 
     # ══════════════════════════════════════════════════════════
     # 💬  ZONE DE CHAT
     # ══════════════════════════════════════════════════════════
 
+    # ── Barre de phase ────────────────────────────────────
     phase = st.session_state.phase
-    phase_labels = {
-        "diagnostic": ("🔍 Diagnostic", "phase-diagnostic"),
-        "entrainement": ("🎯 Entraînement", "phase-entrainement"),
-        "bilan": ("📊 Bilan", "phase-bilan"),
+    phase_conf = {
+        "diagnostic": ("🔍", "Diagnostic en cours", "phase-diagnostic"),
+        "entrainement": ("🎯", "Entraînement", "phase-entrainement"),
+        "bilan": ("✅", "Bilan de séance", "phase-bilan"),
     }
-    label, css_class = phase_labels.get(phase, ("📝 En cours", "phase-entrainement"))
+    icon, label, css = phase_conf.get(phase, ("📝", "En cours", "phase-entrainement"))
 
-    col_phase, col_stats1, col_stats2, col_stats3 = st.columns([2, 1, 1, 1])
+    nb_ex = st.session_state.nb_exercices
+    nb_msgs = max(0, len([m for m in st.session_state.messages if m["role"] == "user"]) - 1)
+    duree = ""
+    if st.session_state.debut_session:
+        duree = f"{(datetime.now() - st.session_state.debut_session).seconds // 60} min"
 
-    with col_phase:
-        st.markdown(f'<span class="phase-badge {css_class}">{label}</span>', unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="phase-bar {css}">
+        <span class="phase-icon">{icon}</span>
+        <span class="phase-label">{label}</span>
+        <span class="phase-detail">{nb_ex} exercices · {nb_msgs} échanges{' · ' + duree if duree else ''}</span>
+    </div>
+    """, unsafe_allow_html=True)
 
-    with col_stats1:
-        st.markdown(
-            f'<div class="stat-card"><div class="number">{st.session_state.nb_exercices}</div>'
-            f'<div class="label">Exercices</div></div>', unsafe_allow_html=True)
-
-    with col_stats2:
-        nb_msgs = len([m for m in st.session_state.messages if m["role"] == "user"]) - 1
-        st.markdown(
-            f'<div class="stat-card"><div class="number">{max(0, nb_msgs)}</div>'
-            f'<div class="label">Échanges</div></div>', unsafe_allow_html=True)
-
-    with col_stats3:
-        if st.session_state.debut_session:
-            duree = (datetime.now() - st.session_state.debut_session).seconds // 60
-            st.markdown(
-                f'<div class="stat-card"><div class="number">{duree} min</div>'
-                f'<div class="label">Durée</div></div>', unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # Afficher les messages
+    # ── Messages ──────────────────────────────────────────
     for i, msg in enumerate(st.session_state.messages):
         if msg["role"] == "system":
             continue
@@ -782,9 +862,8 @@ def main():
         with st.chat_message(msg["role"], avatar="🎓" if msg["role"] == "assistant" else "🧑‍🎓"):
             st.markdown(fix_latex(msg["content"]))
 
-    # ── Input élève ───────────────────────────────────────────
-
-    if user_input := st.chat_input("Ta réponse ou ta question..."):
+    # ── Input ─────────────────────────────────────────────
+    if user_input := st.chat_input("Écris ta réponse ici..."):
         st.session_state.messages.append({"role": "user", "content": user_input})
 
         with st.chat_message("user", avatar="🧑‍🎓"):
@@ -794,7 +873,7 @@ def main():
                          "montre que", "prouve", "simplifie", "développe", "factorise"]
 
         with st.chat_message("assistant", avatar="🎓"):
-            with st.spinner("Réflexion..."):
+            with st.spinner("🧠 Réflexion..."):
                 reponse = appel_tuteur(st.session_state.messages)
 
             st.markdown(fix_latex(reponse))
@@ -808,10 +887,6 @@ def main():
             if any(mot in reponse_lower for mot in ["bilan", "résumé", "synthèse"]):
                 st.session_state.phase = "bilan"
 
-
-# ════════════════════════════════════════════════════════════
-# 🚀  LANCEMENT
-# ════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
     main()
