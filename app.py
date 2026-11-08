@@ -291,7 +291,7 @@ def appel_tuteur(messages):
     client = Groq(api_key=api_key)
     try:
         response = client.chat.completions.create(
-            model="qwen/qwen3-32b",
+            model="openai/gpt-oss-120b",
             messages=messages,
             temperature=0.6,
             max_tokens=2048,
