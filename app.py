@@ -165,20 +165,33 @@ def get_supabase():
         st.error("❌ `pip install supabase` requis pour la persistance.")
         return None
 
-    url = (
-        st.secrets.get("SUPABASE_URL", "")
-        if hasattr(st, "secrets") and "SUPABASE_URL" in st.secrets
-        else os.environ.get("SUPABASE_URL", "")
-    )
-    key = (
-        st.secrets.get("SUPABASE_KEY", "")
-        if hasattr(st, "secrets") and "SUPABASE_KEY" in st.secrets
-        else os.environ.get("SUPABASE_KEY", "")
-    )
+    # --- Lecture des secrets ---
+    url = ""
+    key = ""
+
+    # 1) Essayer st.secrets (Streamlit Cloud)
+    try:
+        url = st.secrets["SUPABASE_URL"]
+        key = st.secrets["SUPABASE_KEY"]
+    except Exception:
+        pass
+
+    # 2) Fallback sur les variables d'environnement (local)
+    if not url:
+        url = os.environ.get("SUPABASE_URL", "")
+    if not key:
+        key = os.environ.get("SUPABASE_KEY", "")
+
     if not url or not key:
         return None
 
-    return create_client(url, key)
+    # --- Connexion ---
+    try:
+        client = create_client(url, key)
+        return client
+    except Exception as e:
+        st.error(f"❌ Erreur connexion Supabase : {e}")
+        return None
 
 
 def sauvegarder_session_db(profil, messages, nb_exercices, phase, bilan=""):
@@ -447,7 +460,8 @@ def main():
             st.session_state[k] = v
 
     # Vérifier si Supabase est configuré
-    sb_ok = get_supabase() is not None
+    sb_test = get_supabase()
+    sb_ok = sb_test is not None
 
     # ══════════════════════════════════════════════════════════
     # 📚  BARRE LATÉRALE
@@ -472,7 +486,25 @@ def main():
         if sb_ok:
             st.success("🗄️ Base de données OK")
         else:
+            # Debug : afficher les clés détectées
+            _dbg_url = ""
+            _dbg_key = ""
+            try:
+                _dbg_url = st.secrets["SUPABASE_URL"]
+            except Exception as _e1:
+                _dbg_url = f"ERREUR: {_e1}"
+            try:
+                _dbg_key = st.secrets["SUPABASE_KEY"]
+            except Exception as _e2:
+                _dbg_key = f"ERREUR: {_e2}"
             st.warning("🗄️ Supabase non configuré — mode local")
+            with st.expander("🔍 Debug Supabase"):
+                st.text(f"URL: {_dbg_url[:30]}..." if len(str(_dbg_url)) > 30 else f"URL: {_dbg_url}")
+                st.text(f"KEY: {_dbg_key[:20]}..." if len(str(_dbg_key)) > 20 else f"KEY: {_dbg_key}")
+                try:
+                    st.text(f"Secrets dispo: {list(st.secrets.keys())}")
+                except Exception as _e3:
+                    st.text(f"st.secrets inaccessible: {_e3}")
 
         st.divider()
 
