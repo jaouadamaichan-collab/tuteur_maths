@@ -164,6 +164,10 @@ CSS = """
 [data-testid="stSidebar"] * {
     color: #e2e8f0 !important;
 }
+[data-testid="stSidebar"] .stTextInput input,
+[data-testid="stSidebar"] .stTextArea textarea {
+    color: #1e293b !important;
+}
 [data-testid="stSidebar"] .stSelectbox label,
 [data-testid="stSidebar"] .stTextInput label,
 [data-testid="stSidebar"] .stTextArea label {
