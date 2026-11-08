@@ -5,7 +5,7 @@ Parcours personnalisé : diagnostic → entraînement → bilan
 Avec suivi persistant et tableau de bord professeur.
 
 Nécessite :
-  pip install streamlit groq supabase
+  pip install streamlit anthropic supabase
   Configurer les secrets Streamlit (voir README)
   streamlit run app.py
 """
@@ -15,7 +15,7 @@ import json
 import os
 import re
 from datetime import datetime
-from groq import Groq
+from anthropic import Anthropic
 
 # ════════════════════════════════════════════════════════════
 # ⚙️  CONFIGURATION
@@ -294,33 +294,45 @@ def fix_latex(text):
 
 
 # ════════════════════════════════════════════════════════════
-# 🤖  APPEL LLM (Groq)
+# 🤖  APPEL LLM (Claude API)
 # ════════════════════════════════════════════════════════════
 
-def get_groq_key():
-    """Récupère la clé Groq depuis secrets, env ou session."""
-    if hasattr(st, "secrets") and "GROQ_API_KEY" in st.secrets:
-        return st.secrets["GROQ_API_KEY"]
-    return os.environ.get("GROQ_API_KEY", st.session_state.get("api_key", ""))
+def get_api_key():
+    """Récupère la clé API Anthropic depuis secrets, env ou session."""
+    try:
+        return st.secrets["ANTHROPIC_API_KEY"]
+    except Exception:
+        return os.environ.get("ANTHROPIC_API_KEY", st.session_state.get("api_key", ""))
 
 
 def appel_tuteur(messages):
-    """Appel à Groq avec le contexte complet."""
-    api_key = get_groq_key()
+    """Appel à Claude avec le contexte complet."""
+    api_key = get_api_key()
     if not api_key:
-        return "⚠️ Clé API Groq manquante. Configure-la dans la barre latérale."
+        return "⚠️ Clé API Claude manquante. Configure-la dans la barre latérale."
 
-    client = Groq(api_key=api_key)
+    client = Anthropic(api_key=api_key)
+
+    # Séparer le system prompt des messages (format Claude API)
+    system_prompt = ""
+    chat_messages = []
+    for msg in messages:
+        if msg["role"] == "system":
+            system_prompt = msg["content"]
+        else:
+            chat_messages.append({"role": msg["role"], "content": msg["content"]})
+
     try:
-        response = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=messages,
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            system=system_prompt,
+            messages=chat_messages,
             temperature=0.6,
             max_tokens=2048,
         )
-        return response.choices[0].message.content.strip()
+        return response.content[0].text.strip()
     except Exception as e:
-        return f"❌ Erreur Groq : {str(e)[:200]}"
+        return f"❌ Erreur Claude : {str(e)[:200]}"
 
 
 # ════════════════════════════════════════════════════════════
@@ -477,17 +489,17 @@ def main():
     with st.sidebar:
         st.markdown("## ⚙️ Configuration")
 
-        # Clé API Groq
-        if not get_groq_key():
+        # Clé API Claude
+        if not get_api_key():
             api_key = st.text_input(
-                "🔑 Clé API Groq", type="password",
+                "🔑 Clé API Claude", type="password",
                 value=st.session_state.get("api_key", ""),
-                help="Obtiens une clé gratuite sur console.groq.com",
+                help="Crée une clé sur console.anthropic.com",
             )
             if api_key:
                 st.session_state.api_key = api_key
         else:
-            st.success("🔑 API Groq OK")
+            st.success("🔑 API Claude OK")
 
         # Statut Supabase
         if sb_ok:
