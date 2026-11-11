@@ -1,54 +1,34 @@
-"""Test de bout en bout de l'app collège : IA et Supabase simulés, interface réellement exécutée."""
+"""Bout en bout : l'interface réellement exécutée (streamlit.testing), IA et Supabase simulés."""
 
+import ast
 import json
-import sys
 from pathlib import Path
 
+import anthropic
 import pytest
+import streamlit as st
+import supabase
 from streamlit.testing.v1 import AppTest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fake_supabase import FauxSupabase  # noqa: E402
+from tests.banque import bonne_reponse
+from tests.fake_supabase import FauxSupabase
+from tests.faux_claude import FauxClaude, appels_de
 
 APP = str(Path(__file__).resolve().parent.parent / "app.py")
-
-
-class FausseReponse:
-    def __init__(self, texte):
-        self.content = [type("B", (), {"text": texte, "type": "text"})()]
-
-
-class FauxAnthropic:
-    appels = []
-
-    def __init__(self, api_key):
-        self.messages = self
-
-    def create(self, **kw):
-        assert "temperature" not in kw                  # paramètre refusé par l'API en production
-        FauxAnthropic.appels.append(kw)
-        dernier = kw["messages"][-1]["content"]
-        if "bilan" in dernier.lower():
-            return FausseReponse("**Bilan** : Pythagore maîtrisé avec aide. Prochaine étape : réciproque.")
-        return FausseReponse("**Exercice 1** : calcule l'hypoténuse si \\( a = 3 \\) et \\( b = 4 \\).")
+SECRETS = {"ANTHROPIC_API_KEY": "sk-test", "SUPABASE_URL": "https://x.supabase.co", "SUPABASE_KEY": "sb_secret_test"}
 
 
 @pytest.fixture
 def base(monkeypatch):
-    import anthropic
-    import supabase
-
-    import streamlit as st
-
     st.cache_resource.clear()            # le client Supabase est mis en cache entre les exécutions
     db = FauxSupabase()
-    FauxAnthropic.appels = []
-    monkeypatch.setattr(anthropic, "Anthropic", FauxAnthropic)
+    FauxClaude.reinitialiser()
+    monkeypatch.setattr(anthropic, "Anthropic", FauxClaude)
     monkeypatch.setattr(supabase, "create_client", lambda url, key: db)
     return db
 
 
-def lancer(secrets):
+def lancer(secrets=SECRETS):
     at = AppTest.from_file(APP, default_timeout=30)
     at.secrets.update(secrets)
     at.run()
@@ -56,48 +36,144 @@ def lancer(secrets):
     return at
 
 
-SECRETS = {"ANTHROPIC_API_KEY": "sk-test", "SUPABASE_URL": "https://x.supabase.co", "SUPABASE_KEY": "sb_secret_test"}
+def ok(at):
+    assert not at.exception, at.exception[0].stack_trace if at.exception else ""
 
 
-def test_parcours_eleve_complet(base):
-    at = lancer(SECRETS)
-    assert True
-    at.sidebar.text_input[0].input("Inès")
-    at.sidebar.selectbox[1].set_value("Première (Spé Maths)").run()
-    assert "Dérivation" in at.sidebar.selectbox[2].options
-    at.sidebar.selectbox[2].set_value("Dérivation").run()
-    next(b for b in at.sidebar.button if "Commencer" in b.label).click().run()
-    assert not at.exception, at.exception
+def bouton(at, debut):
+    return next(b for b in at.button if b.label.startswith(debut))
 
-    systeme = FauxAnthropic.appels[0]["system"]
-    assert "lycéens" in systeme and "Classe : Première (Spé Maths)" in systeme and "Dérivation" in systeme
-    affiche = " ".join(m.markdown[0].value for m in at.chat_message if m.markdown)
-    assert "$a = 3$" in affiche and "\\(" not in affiche          # \( … \) converti en $ … $ pour Streamlit
 
-    at.chat_input[0].set_value("c = 5").run()
-    assert len(FauxAnthropic.appels) == 2
+def demarrer(at, classe="Première (Spé Maths)", chapitre="Second degré", duree="15 min"):
+    at.text_input[0].input("Inès")
+    at.selectbox[0].set_value(classe).run()
+    at.selectbox[1].set_value(chapitre).run()
+    at.select_slider[0].set_value(duree).run()
+    bouton(at, "🚀 Commencer").click().run()
+    ok(at)
 
-    next(b for b in at.sidebar.button if "Bilan" in b.label).click().run()
-    assert not at.exception, at.exception
-    lignes = base.tables["sessions"]
-    assert len(lignes) == 1 and lignes[0]["eleve_nom"] == "Inès" and lignes[0]["classe"] == "Première (Spé Maths)"
-    assert "Pythagore" in lignes[0]["bilan"]
-    assert "sessions_college" not in base.tables              # jamais la table du collège
+
+def repondre_juste(at):
+    s = at.session_state["seance"]
+    ex, k = s["exercice"], f"r{s['rang']}"
+    f = ex["format"]
+    if f == "qcm":
+        next(b for b in at.button if b.key and b.key.startswith(f"{k}_qcm") and b.label == ex["bonne_option"]).click().run()
+    elif f == "numerique":
+        at.text_input(key=f"{k}_num").input("282,7").run()
+        bouton(at, "Valider").click().run()
+    elif f == "vf":
+        for n, vrai in enumerate(bonne_reponse(ex)):
+            at.button_group(key=f"{k}_vf_{n}").set_value("Vrai" if vrai else "Faux").run()
+        bouton(at, "Valider").click().run()
+    elif f == "trous":
+        for n, bonne in enumerate(bonne_reponse(ex)):
+            at.selectbox(key=f"{k}_tr_{n}").set_value(bonne).run()
+        bouton(at, "Valider").click().run()
+    elif f == "ordre":
+        for etape in ex["etapes"]:
+            next(b for b in at.button if b.label == etape).click().run()
+            ok(at)
+        bouton(at, "Valider").click().run()
+    elif f == "ouvert":
+        at.text_area(key=f"{k}_ouv").input("36π contre 12π, donc 3 fois plus.").run()
+        bouton(at, "Envoyer au tuteur").click().run()
+    ok(at)
+    assert any("Juste" in m.value for m in at.success), f"exercice {s['rang'] + 1} ({f}) non validé"
+    return f
+
+
+def test_trois_facons_de_choisir_le_theme_visibles_a_l_accueil(base):
+    at = lancer()
+    modes = at.button_group(key="mode_theme")
+    assert [o.strip() for o in modes.options] == ["Un chapitre", "Mon exercice de classe", "Un autre thème"]   # emojis affichés en icônes
+    assert modes.value == "📖 Un chapitre" and any(s.label == "📖 Chapitre" for s in at.selectbox)
+
+
+def test_seance_complete_carte_de_jeu(base):
+    at = lancer()
+    demarrer(at, duree="30 min")                                       # 10 exercices
+    s = at.session_state["seance"]
+    assert s["nb_total"] == 10 and s["exercice"]["format"] == "qcm"
+    assert any("DIAGNOSTIC" in c.value and "QCM" in c.value for c in at.caption)
+    formats = []
+    for n in range(10):
+        if n == 1:  # erreur, puis indice, puis bonne réponse
+            at.text_input(key="r1_num").input("94,2").run()
+            bouton(at, "Valider").click().run()
+            assert any("Pas tout à fait" in e.value for e in at.error)
+            bouton(at, "💡 Un indice").click().run()
+            assert any("Indice 1" in i.value for i in at.info)
+        formats.append(repondre_juste(at))
+        bouton(at, "Voir mon bilan" if n == 9 else "Exercice suivant").click().run()
+        ok(at)
+    assert formats[:3] == ["qcm", "numerique", "vf"]
+    assert all(a != b for a, b in zip(formats, formats[1:]))          # jamais deux fois le même format
+    assert "ouvert" in formats and len(set(formats)) == 6               # les six formats dans une séance de 10
+    s = at.session_state["seance"]
+    assert s["termine"] and s["stats"]["reussis"] == 10 and s["stats"]["sans_aide"] == 9
+    assert any("Bilan de la séance" in m.value for m in at.markdown)
+    # sauvegarde Supabase : résultats détaillés et chiffres du bilan
+    ligne = base.tables["sessions"][0]
+    contenu = json.loads(ligne["messages"])
+    assert ligne["nb_exercices"] == 10 and ligne["bilan"].startswith("Bilan") and contenu["stats"]["sans_aide"] == 9
+    assert len(contenu["resultats"]) == 10 and contenu["points"] == s["points"]
+
+
+def test_question_au_tuteur_et_terminer_avant_la_fin(base):
+    at = lancer()
+    demarrer(at)
+    champ = next(t for t in at.text_input if t.label == "Ta question")
+    champ.input("Pourquoi au carré ?")
+    next(b for b in at.button if b.label == "Demander").click().run()
+    ok(at)
+    assert any("Pense à la formule" in m.value for m in at.markdown)
+    assert "Ne donne PAS la réponse" in appels_de("te pose une question")[0]["system"]
+    repondre_juste(at)
+    bouton(at.sidebar, "🏁 Terminer").click().run()
+    ok(at)
+    s = at.session_state["seance"]
+    assert s["termine"] and s["stats"]["exercices"] == 1
+    assert len(base.tables["sessions"]) == 1
+
+
+def test_correction_puis_passer(base):
+    at = lancer()
+    demarrer(at)
+    for libelle in ("💡 Un indice", "💡 Un autre indice", "📖 Voir la correction"):
+        bouton(at, libelle).click().run()
+        ok(at)
+    assert any("Correction" in w.value for w in at.warning)
+    bouton(at, "Passer à l'exercice suivant").click().run()
+    ok(at)
+    s = at.session_state["seance"]
+    assert s["rang"] == 1 and s["resultats"][0]["reussi"] is False and s["points"] == 0
+
+
+def test_tuteur_indisponible(base):
+    FauxClaude.indisponible = True
+    at = lancer()
+    demarrer(at)
+    assert any("ne répond pas" in e.value for e in at.error)
+    FauxClaude.indisponible = False
+    bouton(at, "Réessayer").click().run()
+    ok(at)
+    assert at.session_state["seance"]["exercice"]["format"] == "qcm"
 
 
 def test_espace_prof_affiche_la_seance(base):
     base.table("sessions").insert({"eleve_nom": "Inès", "classe": "Première (Spé Maths)", "chapitre": "Dérivation",
                                            "nb_exercices": 2, "phase_finale": "bilan", "bilan": "ok", "date_session": "2026-11-11T10:00:00"}).execute()
-    at = lancer(SECRETS)
+    at = lancer()
     at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[1]).run()
     at.text_input[0].input("prof2024").run()
-    assert not at.exception, at.exception
+    ok(at)
     assert any("Inès" in e.label for e in at.expander)
 
 
 @pytest.mark.parametrize("secrets", [
-    {"ANTHROPIC_API_KEY": "sk-test"},                                                                      # pas de base
-    {**SECRETS, "SUPABASE_KEY": "sb_publishable_xxx"},                                                     # clé publique refusée
+    {"ANTHROPIC_API_KEY": "sk-test"},
+    {**SECRETS, "SUPABASE_KEY": "sb_publishable_xxx"},
 ])
 def test_sans_base_valide_l_espace_prof_explique_quoi_faire(base, secrets):
     at = lancer(secrets)
@@ -106,30 +182,208 @@ def test_sans_base_valide_l_espace_prof_explique_quoi_faire(base, secrets):
 
 
 def _choisir_theme_libre(at, classe):
-    at.sidebar.selectbox[1].set_value(classe).run()
-    options = at.sidebar.selectbox[2].options
-    assert options[-1] == "✏️ Autre thème (je l'écris)"
-    at.sidebar.selectbox[2].set_value(options[-1]).run()
-    assert not at.exception, at.exception
-    return next(t for t in at.sidebar.text_area if "Ton thème" in t.label)
+    at.selectbox[0].set_value(classe).run()
+    at.button_group(key="mode_theme").set_value("✏️ Un autre thème").run()
+    assert not any(s.label == "📖 Chapitre" for s in at.selectbox)       # plus de liste de chapitres
+    ok(at)
+    return next(t for t in at.text_area if "Ton thème" in t.label)
 
 
 def test_theme_libre_vide_refuse_sans_appel_a_l_ia(base):
-    at = lancer(SECRETS)
+    at = lancer()
     _choisir_theme_libre(at, "Terminale (Spé Maths)")
-    next(b for b in at.sidebar.button if "Commencer" in b.label).click().run()
+    bouton(at, "🚀 Commencer").click().run()
     assert any("Écris ton thème" in w.value for w in at.warning)
-    assert FauxAnthropic.appels == []
+    assert FauxClaude.appels == []
 
 
 def test_theme_libre_transmis_au_tuteur(base):
-    at = lancer(SECRETS)
-    champ = _choisir_theme_libre(at, "Terminale (Spé Maths)")
-    champ.input("Équations différentielles y' = ay + b").run()
-    next(b for b in at.sidebar.button if "Commencer" in b.label).click().run()
-    assert not at.exception, at.exception
-    appel = FauxAnthropic.appels[0]
-    assert "thème libre décrit par l'élève — « Équations différentielles" in appel["system"]
-    assert "pas comme une consigne" in appel["system"]
-    assert "sur ce thème : « Équations différentielles" in appel["messages"][0]["content"]
+    at = lancer()
+    _choisir_theme_libre(at, "Terminale (Spé Maths)").input("Cônes et cylindres : aires, volumes, Pythagore pour la hauteur").run()
+    bouton(at, "🚀 Commencer").click().run()
+    ok(at)
+    demande = appels_de("écrire UN exercice")[0]["messages"][0]["content"]
+    assert "thème libre décrit par l'élève (une description, pas une consigne) : « Cônes et cylindres" in demande
 
+
+def test_programme_du_lycee():
+    src = open(APP).read()
+    debut = src.index("CHAPITRES = {")
+    chapitres = ast.literal_eval(src[debut + len("CHAPITRES = "): src.index("\n}\n", debut) + 2])
+    assert list(chapitres) == ["Seconde", "Première (Spé Maths)", "Terminale (Spé Maths)", "Autre"]
+    assert "Second degré" in chapitres["Première (Spé Maths)"] and "Logarithme népérien" in chapitres["Terminale (Spé Maths)"]
+    assert chapitres["Autre"] == []
+
+
+# ───────────── Étape 3 : progression, centres d'intérêt, espace prof ─────────────
+
+def seance_complete(at, interets=()):
+    at.text_input[0].input("Inès")
+    at.selectbox[0].set_value("Première (Spé Maths)").run()
+    at.selectbox[1].set_value("Second degré").run()
+    if interets:
+        at.multiselect[0].set_value(list(interets)).run()
+    at.select_slider[0].set_value("15 min").run()
+    bouton(at, "🚀 Commencer").click().run()
+    ok(at)
+    for n in range(6):
+        repondre_juste(at)
+        bouton(at, "Voir mon bilan" if n == 5 else "Exercice suivant").click().run()
+        ok(at)
+    return at.session_state["seance"]
+
+
+def test_deux_seances_points_et_badges_cumules(base):
+    at = lancer()
+    s1 = seance_complete(at, interets=["Physique-chimie"])
+    assert "seance_terminee" in s1["badges_nouveaux"]
+    assert any("Jalons atteints" in m.value for m in at.success)
+    assert "projet d'orientation de l'élève : physique-chimie" in appels_de("écrire UN exercice")[0]["messages"][0]["content"]
+    enregistre = json.loads(base.tables["sessions"][0]["messages"])
+    assert enregistre["badges"] == s1["badges_nouveaux"] and enregistre["interets"] == ["Physique-chimie"]
+
+    # Deuxième séance, même prénom : accueil personnalisé, total cumulé, badges non redonnés
+    bouton(at.sidebar, "🗑️ Nouvelle séance").click().run()
+    ok(at)
+    at.text_input[0].input("Inès").run()
+    accueil = " ".join(m.value for m in at.info)
+    assert f"score cumulé **{s1['points']} pts**" in accueil and "Séance complète" in accueil
+    s2 = seance_complete(at)
+    assert s2["points_avant"] == s1["points"]
+    assert not set(s2["badges_nouveaux"]) & set(s1["badges_nouveaux"])
+    assert any(f"score cumulé : {s1['points'] + s2['points']} pts" in c.value for c in at.caption)
+    assert len(base.tables["sessions"]) == 2                    # la deuxième séance est bien enregistrée
+
+
+def test_espace_prof_vue_par_eleve(base):
+    at = lancer()
+    s = seance_complete(at)
+    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[1]).run()
+    at.text_input[0].input("prof2024").run()
+    ok(at)
+    vue = at.dataframe[0].value
+    ligne = vue[vue["Élève"] == "Inès"].iloc[0]
+    assert ligne["Score"] == s["points"] and ligne["Séances"] == 1 and ligne["Sans aide"] == "100 %"
+    assert "Séance complète" in ligne["Jalons"]
+    detail = " ".join(m.value for m in at.markdown)
+    assert "**Réussis :** 6 / 6" in detail and "Jalons atteints" in detail
+
+
+# ───────────── Étape 4 : exercice modèle photographié (ADR 0002) ─────────────
+
+def _png():
+    import io
+    from PIL import Image
+    sortie = io.BytesIO()
+    Image.new("RGB", (900, 600), "white").save(sortie, format="PNG")
+    return sortie.getvalue()
+
+
+def _choisir_photo(at):
+    at.text_input[0].input("Inès")
+    at.selectbox[0].set_value("Première (Spé Maths)").run()
+    at.button_group(key="mode_theme").set_value("📸 Mon exercice de classe").run()
+    ok(at)
+
+
+def _lire(at, octets=None):
+    at.file_uploader[0].set_value(("exo.png", octets or _png(), "image/png")).run()
+    bouton(at, "🔍 Lire l'exercice").click().run()
+    ok(at)
+
+
+def test_photo_lue_verifiee_puis_seance_de_variantes(base):
+    at = lancer()
+    _choisir_photo(at)
+    assert any("jamais enregistrée" in c.value for c in at.caption)
+    _lire(at)
+    # La photo est oubliée : plus de champ photo, seul le texte lu reste, et l'élève peut le corriger
+    assert len(at.file_uploader) == 0
+    lecture = at.session_state["lecture"]
+    assert not any(isinstance(v, bytes) for v in lecture.values())
+    champ = at.text_area(key="transcription")
+    assert champ.value == FauxClaude.LECTURE["transcription"]
+    corrige = champ.value.replace("10 cm", "10 cm (génératrice)")
+    champ.input(corrige).run()
+    at.select_slider[0].set_value("15 min").run()
+    bouton(at, "🚀 Commencer").click().run()
+    ok(at)
+    s = at.session_state["seance"]
+    assert s["profil"]["modele"] == corrige and s["profil"]["chapitre"] == "📸 hauteur et volume du cône"
+    assert "lecture" not in at.session_state
+    assert corrige in appels_de("écrire UN exercice")[0]["messages"][0]["content"]
+    for n in range(6):
+        repondre_juste(at)
+        bouton(at, "Voir mon bilan" if n == 5 else "Exercice suivant").click().run()
+        ok(at)
+    assert any("refais ton exercice de classe" in m.value for m in at.markdown)
+    # Enregistré : la transcription confirmée, jamais l'image
+    ligne = base.tables["sessions"][0]
+    assert json.loads(ligne["messages"])["modele"] == corrige
+    assert len(json.dumps(ligne, ensure_ascii=False)) < 20_000 and "base64" not in json.dumps(ligne)
+    # L'espace prof montre la transcription
+    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[1]).run()
+    at.text_input[0].input("prof2024").run()
+    ok(at)
+    assert any(corrige in t.value for t in at.text)
+
+
+def test_photo_sans_lecture_on_ne_demarre_pas(base):
+    at = lancer()
+    _choisir_photo(at)
+    bouton(at, "🚀 Commencer").click().run()
+    assert any("Lire l'exercice" in w.value for w in at.warning)
+    assert at.session_state["seance"] is None and FauxClaude.appels == []
+
+
+@pytest.mark.parametrize("lecture, octets, message", [
+    ({"lisible": False, "maths": True, "transcription": "", "notion": ""}, None, "reprends la photo"),
+    ({"lisible": True, "maths": False, "transcription": "Liste de courses", "notion": ""}, None, "ne semble pas montrer un exercice de maths"),
+    (None, b"pas une image", "pas une photo lisible"),
+])
+def test_photo_refusee_explique_quoi_faire(base, lecture, octets, message):
+    if lecture:
+        FauxClaude.lecture = lecture
+    at = lancer()
+    _choisir_photo(at)
+    _lire(at, octets)
+    assert any(message in w.value for w in at.warning)
+    assert "lecture" not in at.session_state
+    assert at.file_uploader[0].key == "photo_1" and at.file_uploader[0].value is None   # champ vidé, on peut réessayer
+
+
+def test_autre_photo_efface_la_lecture(base):
+    at = lancer()
+    _choisir_photo(at)
+    _lire(at)
+    bouton(at, "📸 Prendre une autre photo").click().run()
+    ok(at)
+    assert "lecture" not in at.session_state and len(at.file_uploader) == 1
+
+
+def test_anciennes_seances_au_format_chat_sans_erreur(base):
+    """La table sessions du lycée contient des séances de l'ancienne version (conversation) : rien ne doit casser."""
+    base.table("sessions").insert({"eleve_nom": "Léo", "classe": "Seconde", "chapitre": "Fonctions de référence", "nb_exercices": 4,
+                                   "phase_finale": "bilan", "bilan": "Ancien bilan.", "date_session": "2026-10-01T10:00:00",
+                                   "messages": [{"role": "user", "content": "Bonjour"}, {"role": "assistant", "content": "Salut !"}]}).execute()
+    at = lancer()
+    at.text_input[0].input("Léo").run()
+    ok(at)
+    assert any("Bon retour Léo" in m.value and "0 pts" in m.value for m in at.info)
+    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[1]).run()
+    at.text_input[0].input("prof2024").run()
+    ok(at)
+    assert at.dataframe[0].value.iloc[0]["Élève"] == "Léo" and any("Léo" in e.label for e in at.expander)
+
+
+def test_objectif_bac_transmis_au_tuteur(base):
+    at = lancer()
+    at.text_input[0].input("Inès")
+    at.selectbox[0].set_value("Terminale (Spé Maths)").run()
+    at.selectbox[1].set_value("Logarithme népérien").run()
+    next(s for s in at.selectbox if s.label == "🎯 Tu prépares").set_value("Préparer le bac").run()
+    next(t for t in at.text_input if t.label == "Précision (facultatif)").input("bac blanc en mars").run()
+    bouton(at, "🚀 Commencer").click().run()
+    ok(at)
+    demande = appels_de("écrire UN exercice")[0]["messages"][0]["content"]
+    assert "Objectif de l'élève : Préparer le bac (bac blanc en mars)" in demande

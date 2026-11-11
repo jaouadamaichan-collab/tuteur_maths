@@ -1,0 +1,97 @@
+# Tuteur de maths — Collège
+
+Un tuteur qui fait progresser un lycéen (Seconde → Terminale) en mathématiques par des exercices courts et variés, au niveau des attendus du bac, sur un ton sobre.
+
+## Séance
+
+**Séance** :
+Une session de travail d'un élève, du choix du thème au bilan. Elle suit un déroulé fixe : diagnostic, entraînement, bilan.
+_Avoid_ : cours, leçon, partie
+
+**Diagnostic** :
+Les trois premiers exercices d'une séance, qui situent l'élève avant l'entraînement.
+_Avoid_ : test, évaluation, contrôle
+
+**Bilan** :
+La synthèse de fin de séance, fondée sur les résultats réels des exercices (réussis, avec ou sans indice).
+_Avoid_ : résumé, compte rendu
+
+**Thème** :
+Ce sur quoi l'élève s'entraîne pendant une séance : un chapitre de la liste, un thème libre qu'il a écrit, ou un exercice modèle photographié.
+_Avoid_ : sujet, matière
+
+**Thème libre** :
+Un thème décrit par l'élève avec ses mots, quand il ne le trouve pas dans la liste des chapitres.
+_Avoid_ : chapitre personnalisé, autre chapitre
+
+**Exercice modèle** :
+Un exercice fait en classe que l'élève photographie, et dont le tuteur s'inspire pour créer des exercices du même type. Le tuteur ne le résout pas à la place de l'élève.
+_Avoid_ : photo de devoir, exercice importé
+
+**Transcription** :
+Le texte de l'exercice modèle tel que le tuteur l'a lu sur la photo, confirmé par l'élève. Seule trace conservée d'un exercice modèle.
+_Avoid_ : description, lecture
+
+**Domaines** :
+Les domaines liés aux spécialités ou au projet d'orientation de l'élève (physique-chimie, économie, informatique…), choisis dans son profil, qui servent à mettre les énoncés en contexte.
+_Avoid_ : centres d'intérêt, passions, hobbies
+
+## Exercices
+
+**Exercice** :
+Une question unique posée à l'élève, avec un format, un énoncé et une réponse attendue.
+_Avoid_ : question (pour l'ensemble), problème, activité
+
+**Format** :
+La forme d'interaction d'un exercice, choisie par l'app, jamais deux fois de suite. Un format est fermé ou ouvert.
+_Avoid_ : type d'exercice, modèle
+
+**Format fermé** :
+Un format dont la réponse attendue est unique, corrigé instantanément par l'app : QCM, réponse numérique, vrai ou faux, texte à trous, étapes à remettre dans l'ordre.
+_Avoid_ : exercice automatique, question fermée
+
+**Format ouvert** :
+La réponse rédigée : une justification courte que l'élève écrit et que le tuteur corrige. Proposé environ une fois sur cinq.
+_Avoid_ : question ouverte, rédaction, texte libre
+
+**Figure** :
+Un dessin qui accompagne un exercice, quel que soit son format : solide ou triangle cotés, droite, ou courbe d'une fonction. Ce n'est pas un format.
+_Avoid_ : schéma, image, illustration
+
+**Réponse attendue** :
+La bonne réponse d'un exercice à format fermé, fournie avec l'énoncé et cachée à l'élève, qui permet à l'app de corriger instantanément.
+_Avoid_ : corrigé, solution
+
+**Contexte** :
+La situation réaliste dans laquelle un exercice est posé, comme dans un sujet de bac, tirée si possible des domaines de l'élève (« Une population de bactéries est modélisée par… »). Un énoncé peut aussi être purement mathématique.
+_Avoid_ : mission, histoire, scénario
+
+**Indice** :
+Une aide graduée que l'élève demande d'un clic pendant un exercice ; le dernier niveau est la correction.
+_Avoid_ : aide, astuce, coup de pouce
+
+## Progression
+
+**Score** :
+Les points gagnés pour chaque exercice mené à son terme ; moins nombreux avec des indices, jamais nuls.
+_Avoid_ : XP, note, récompense
+
+**Score cumulé** :
+La somme des scores de toutes les séances d'un élève, rattachée à son prénom.
+_Avoid_ : total, XP total
+
+**Série** :
+Le nombre d'exercices réussis d'affilée.
+_Avoid_ : combo, streak
+
+**Jalon** :
+Une étape de progression atteinte une seule fois (Autonomie, Régularité, Polyvalence, Rebond, Séance complète). Ton neutre : pas de récompense de jeu.
+_Avoid_ : badge, trophée, médaille
+
+**Objectif** :
+Ce que l'élève prépare (revoir une notion, un DS, le bac, aller plus loin), avec une précision libre ; il oriente le niveau des exercices et le bilan.
+_Avoid_ : but, cible
+
+**Réussite sans aide** :
+La part des exercices réussis sans indice ni correction ; l'indicateur d'autonomie suivi par le prof.
+_Avoid_ : taux de réussite, score d'autonomie
