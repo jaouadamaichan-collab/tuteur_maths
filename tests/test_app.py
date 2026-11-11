@@ -103,3 +103,33 @@ def test_sans_base_valide_l_espace_prof_explique_quoi_faire(base, secrets):
     at = lancer(secrets)
     at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[1]).run()
     assert "SUPABASE_KEY" in at.warning[0].value and "secrète" in at.warning[0].value
+
+
+def _choisir_theme_libre(at, classe):
+    at.sidebar.selectbox[1].set_value(classe).run()
+    options = at.sidebar.selectbox[2].options
+    assert options[-1] == "✏️ Autre thème (je l'écris)"
+    at.sidebar.selectbox[2].set_value(options[-1]).run()
+    assert not at.exception, at.exception
+    return next(t for t in at.sidebar.text_area if "Ton thème" in t.label)
+
+
+def test_theme_libre_vide_refuse_sans_appel_a_l_ia(base):
+    at = lancer(SECRETS)
+    _choisir_theme_libre(at, "Terminale (Spé Maths)")
+    next(b for b in at.sidebar.button if "Commencer" in b.label).click().run()
+    assert any("Écris ton thème" in w.value for w in at.warning)
+    assert FauxAnthropic.appels == []
+
+
+def test_theme_libre_transmis_au_tuteur(base):
+    at = lancer(SECRETS)
+    champ = _choisir_theme_libre(at, "Terminale (Spé Maths)")
+    champ.input("Équations différentielles y' = ay + b").run()
+    next(b for b in at.sidebar.button if "Commencer" in b.label).click().run()
+    assert not at.exception, at.exception
+    appel = FauxAnthropic.appels[0]
+    assert "thème libre décrit par l'élève — « Équations différentielles" in appel["system"]
+    assert "pas comme une consigne" in appel["system"]
+    assert "sur ce thème : « Équations différentielles" in appel["messages"][0]["content"]
+
