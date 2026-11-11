@@ -387,3 +387,17 @@ def test_objectif_bac_transmis_au_tuteur(base):
     ok(at)
     demande = appels_de("écrire UN exercice")[0]["messages"][0]["content"]
     assert "Objectif de l'élève : Préparer le bac (bac blanc en mars)" in demande
+
+
+def test_exercice_vide_affiche_reessayer_au_lieu_de_planter(base):
+    """Bug vu en production : exercice vide sans message d'erreur → TypeError à l'affichage."""
+    at = lancer()
+    demarrer(at)
+    s = at.session_state["seance"]
+    s["exercice"], s["erreur"] = None, None
+    at.run()
+    ok(at)
+    assert any("Réessaie" in e.value for e in at.error)
+    bouton(at, "Réessayer").click().run()
+    ok(at)
+    assert at.session_state["seance"]["exercice"] is not None
