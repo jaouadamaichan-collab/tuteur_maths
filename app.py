@@ -195,6 +195,14 @@ CSS = """
     color: #94a3b8 !important;
     -webkit-text-fill-color: #94a3b8 !important;
 }
+/* Boutons secondaires (Nouvelle séance…) : fond translucide, sinon texte clair sur fond blanc. */
+[data-testid="stSidebar"] .stButton button[kind="secondary"] {
+    background: rgba(255,255,255,0.08) !important;
+    border: 1px solid rgba(255,255,255,0.25) !important;
+}
+[data-testid="stSidebar"] .stButton button[kind="secondary"]:hover {
+    background: rgba(255,255,255,0.16) !important;
+}
 [data-testid="stSidebar"] hr {
     border-color: rgba(255,255,255,0.1) !important;
 }
@@ -624,7 +632,7 @@ def main():
         page_title="Tuteur Maths IA",
         page_icon="🎓",
         layout="wide",
-        initial_sidebar_state="expanded",
+        initial_sidebar_state="auto",  # repliée sur téléphone, sinon elle cache la carte
     )
     st.markdown(CSS, unsafe_allow_html=True)
 
@@ -867,7 +875,8 @@ def main():
         st.markdown("""<div class="start-hint">
             <div class="arrow">👈</div>
             Remplis ton profil dans le panneau à gauche, puis clique sur
-            <strong>Commencer la séance</strong>
+            <strong>Commencer la séance</strong><br>
+            <small>Sur téléphone : touche <strong>»</strong> en haut à gauche pour ouvrir le panneau.</small>
         </div>""", unsafe_allow_html=True)
         return
 
