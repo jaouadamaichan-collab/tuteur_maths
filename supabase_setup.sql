@@ -26,9 +26,7 @@ CREATE INDEX IF NOT EXISTS idx_sessions_date  ON sessions (date_session DESC);
 -- Activer Row Level Security (recommandé par Supabase)
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 
--- Politique : accès total via la clé service (anon key dans notre cas)
--- En production, restreindre selon l'authentification
-CREATE POLICY "allow_all" ON sessions
-    FOR ALL
-    USING (true)
-    WITH CHECK (true);
+-- Aucune politique d'accès public : seule la clé SECRÈTE (sb_secret_… ou service_role),
+-- stockée dans les secrets Streamlit, peut lire et écrire. Les élèves sont en majorité mineurs.
+-- Supprime l'ancienne politique ouverte créée par une version précédente de ce script.
+DROP POLICY IF EXISTS "allow_all" ON sessions;

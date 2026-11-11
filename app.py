@@ -361,20 +361,30 @@ CSS = """
 # 🗄️  SUPABASE
 # ════════════════════════════════════════════════════════════
 
+@st.cache_resource
+def _client_supabase(url, key):
+    from supabase import create_client
+    return create_client(url, key)
+
+
 def get_supabase():
+    """Client Supabase côté serveur. Les identifiants sont lus dans les secrets Streamlit,
+    jamais dans le code : les élèves sont mineurs, leurs échanges ne doivent pas être lisibles
+    par quiconque récupère le dépôt. Utiliser la clé SECRÈTE (sb_secret_… ou service_role) :
+    la table n'a aucune politique d'accès public."""
     try:
-        from supabase import create_client
+        import supabase  # noqa: F401
     except ImportError:
         return None
-
-    # ── Identifiants Supabase (à remplir) ──
-    url = "https://gbsdkpvnogyqkbiuhhzd.supabase.co"
-    key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdic2RrcHZub2d5cWtiaXVoaHpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQxMjMxMTAsImV4cCI6MjEwOTY5OTExMH0.eCG0FVJltao6KyUey5EPV-NrDiq0idpKzWTmGtvQG5Y"
-
-    if "COLLE_TON" in url or "COLLE_TON" in key:
+    try:
+        url = st.secrets["SUPABASE_URL"]
+        key = st.secrets["SUPABASE_KEY"]
+    except Exception:
+        return None
+    if not url or not key or key.startswith("sb_publishable_"):
         return None
     try:
-        return create_client(url, key)
+        return _client_supabase(url, key)
     except Exception:
         return None
 
@@ -702,7 +712,7 @@ def main():
         </div>""", unsafe_allow_html=True)
 
         if not sb_ok:
-            st.warning("Le tableau de bord nécessite la base de données.")
+            st.warning("Base de données non configurée : ajoutez SUPABASE_URL et SUPABASE_KEY (clé secrète sb_secret_…, pas la clé publique) dans les secrets Streamlit.")
             return
 
         if not st.session_state.prof_auth:

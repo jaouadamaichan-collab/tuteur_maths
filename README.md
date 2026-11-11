@@ -15,7 +15,7 @@ Tuteur intelligent de mathématiques pour lycéens avec parcours personnalisé :
 
 ```bash
 pip install -r requirements.txt
-export GROQ_API_KEY="gsk_..."
+export ANTHROPIC_API_KEY="sk-ant-..."   # en local, les secrets Supabase vont dans .streamlit/secrets.toml
 streamlit run app.py
 ```
 
@@ -26,9 +26,11 @@ streamlit run app.py
 1. Crée un compte sur [supabase.com](https://supabase.com)
 2. Crée un nouveau projet
 3. Va dans **SQL Editor** → colle le contenu de `supabase_setup.sql` → **Run**
-4. Récupère tes clés dans **Settings → API** :
+4. Récupère tes clés dans **Project Settings → API Keys** :
    - `Project URL` → c'est ton `SUPABASE_URL`
-   - `anon public` key → c'est ton `SUPABASE_KEY`
+   - la clé **secrète** (`sb_secret_…`, ou `service_role` dans *Legacy API Keys*) → c'est ton `SUPABASE_KEY`.
+     **Jamais la clé publique** (`anon` / `sb_publishable_…`) : la table n'a aucune politique d'accès public,
+     et aucune clé ne doit être écrite dans le code (dépôt public, élèves mineurs).
 
 ### 2. Déployer sur Streamlit Cloud
 
@@ -38,9 +40,9 @@ streamlit run app.py
 4. Dans **Advanced settings → Secrets**, ajoute :
 
 ```toml
-GROQ_API_KEY = "gsk_ta_clé_groq"
+ANTHROPIC_API_KEY = "sk-ant-..."
 SUPABASE_URL = "https://xxxxx.supabase.co"
-SUPABASE_KEY = "eyJ..."
+SUPABASE_KEY = "sb_secret_..."
 MOT_DE_PASSE_PROF = "ton_mot_de_passe_prof"
 ```
 
@@ -66,6 +68,6 @@ tuteur-maths/
 
 ## Technologies
 
-- **LLM** : Groq (qwen/qwen3-32b) — gratuit et rapide
+- **LLM** : API Claude (`claude-haiku-4-5`)
 - **Base de données** : Supabase (PostgreSQL) — gratuit jusqu'à 500 Mo
 - **Interface** : Streamlit — gratuit sur Streamlit Cloud
