@@ -1,7 +1,7 @@
 # 🎓 Tuteur de Maths IA
 
 Tuteur de mathématiques pour lycéens (Seconde → Terminale, spécialité maths).
-L'élève s'entraîne par **exercices courts, variés et ludiques** : **Diagnostic → Entraînement → Bilan**.
+L'élève s'entraîne par **exercices courts et variés, au niveau des attendus du bac** : **Diagnostic → Entraînement → Bilan**.
 
 ## Fonctionnalités
 
@@ -9,9 +9,11 @@ L'élève s'entraîne par **exercices courts, variés et ludiques** : **Diagnost
 - 🃏 **Six formats d'exercice** qui alternent (QCM, réponse numérique, vrai ou faux, texte à trous, étapes dans l'ordre, réponse rédigée), **corrigés instantanément par l'app** (ADR 0001)
 - 📈 **Figures dessinées par l'app** : solides, triangles, droites et **courbes de fonctions**, avec mesures vérifiées
 - 💡 **Indices gradués** puis correction ; question libre au tuteur, qui ne donne pas la réponse
-- ⭐ **Points, séries et badges** cumulés d'une séance à l'autre ; **missions** habillées selon les centres d'intérêt de l'élève
+- 🎯 **Orienté DS et bac** : l'élève indique ce qu'il prépare ; énoncés et bilan suivent les attendus du lycée, ton sobre
+- 🧭 **Contextes réalistes** tirés des domaines de l'élève (spécialités, projet d'orientation : physique-chimie, économie, informatique…)
+- 📈 **Score et jalons** cumulés d'une séance à l'autre (Autonomie, Régularité, Polyvalence, Rebond), sans effets de jeu
 - 📸 **Exercice modèle** : le tuteur lit la photo, l'élève vérifie le texte, puis s'entraîne sur des variantes. La photo n'est jamais enregistrée et l'exercice de classe n'est jamais résolu (ADR 0002)
-- 👩‍🏫 **Espace prof** : vue par élève (points, badges, part de réussite sans aide, formats où il bloque) et détail des séances
+- 👩‍🏫 **Espace prof** : vue par élève (score, jalons, part de réussite sans aide, formats où il bloque) et détail des séances
 
 Vocabulaire du projet : `GLOSSARY.md`. Décisions : `docs/adr/`.
 
@@ -61,7 +63,7 @@ MOT_DE_PASSE_PROF = "ton_mot_de_passe_prof"
 
 ```
 app.py              # Interface Streamlit : accueil, panneau, espace prof, sauvegarde Supabase
-seance.py           # Déroulé d'une séance (diagnostic, entraînement, points, badges, bilan)
+seance.py           # Déroulé d'une séance (diagnostic, entraînement, score, jalons, bilan)
 exercices.py        # Contrat d'exercice, correction par le code, calcul vérifié, barème
 figures.py          # Figures dessinées par l'app (solides, triangles, droites, courbes)
 tuteur.py           # Prompts et appels à l'API Claude

@@ -64,4 +64,16 @@ def test_courbe_refusee(brut):
 def test_prompts_du_lycee():
     assert "lycéens (Seconde à Terminale" in T.SOCLE and "ln" in T.SOCLE
     assert '"type": "courbe"' in T.FIGURES and "exp()" in T.SPECIFICATIONS["numerique"]
-    assert "lycéen" in T.PROMPT_LECTURE and "lycéen" in T.consigne_mission({"interets": []}, 0)
+    assert "lycéen" in T.PROMPT_LECTURE and "sujet de bac" in T.consigne_mission({"interets": []}, 0)
+
+
+def test_ton_sobre_de_lycee():
+    """Retour des élèves : l'app collège était trop enfantine pour des lycéens."""
+    import exercices as E
+    import progression as P
+    assert "pas d'emojis" in T.SOCLE and "bac" in T.NIVEAUX["difficile"]
+    assert "Sport" not in " ".join(T.CENTRES_INTERET[:3]) and "Physique-chimie" in T.CENTRES_INTERET
+    assert [b[1] for b in P.BADGES.values()] == ["Autonomie", "Régularité", "Polyvalence", "Rebond", "Séance complète"]
+    assert E.NOMS_FORMATS["ordre"] == "Ordonner une démonstration" and E.FREQUENCE_OUVERT == 3
+    source = open("ecran.py").read()
+    assert "balloons" not in source and "Bravo" not in source

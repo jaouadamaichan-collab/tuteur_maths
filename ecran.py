@@ -11,7 +11,7 @@ import progression as P
 import seance as S
 from figures import dessiner
 
-PHASES = {"diagnostic": "🔍 Diagnostic", "entrainement": "🎯 Entraînement"}
+PHASES = {"diagnostic": "Diagnostic", "entrainement": "Entraînement"}
 
 
 def brut(texte: str) -> str:
@@ -25,7 +25,7 @@ def _image_figure(cle: str, figure: dict) -> bytes:
 
 
 def compteurs(s: dict) -> None:
-    blocs = (("⭐ Points", s["points"]), ("🔥 Série", s["serie"]), ("🏅 Badges", len(S.badges(s))))
+    blocs = (("Score", s["points"]), ("Série", s["serie"]), ("Jalons", f"{len(S.badges(s))}/{len(P.BADGES)}"))
     st.markdown(
         "<div style='display:flex;gap:.6rem;flex-wrap:nowrap;margin-bottom:.4rem'>"
         + "".join(
@@ -133,7 +133,7 @@ def zone_retour(s: dict, cle_api: str, sauvegarder) -> None:
     if not r:
         return
     if r["ok"]:
-        msg = f"✅ Bravo ! +{r['gain']} points" + (f" +{r['bonus']} (série de {s['serie']} 🔥)" if r["bonus"] else "")
+        msg = f"✅ Juste. +{r['gain']} pts" + (f" (+{r['bonus']} pour une série de {s['serie']})" if r["bonus"] else "")
         if r.get("texte"):
             msg += f"\n\n{brut(r['texte'])}"
         st.success(msg)
@@ -143,7 +143,7 @@ def zone_retour(s: dict, cle_api: str, sauvegarder) -> None:
                 S.exercice_suivant(s, cle_api, sauvegarder)
             st.rerun()
     else:
-        st.error("Pas tout à fait." + (f" {brut(r['texte'])}" if r.get("texte") else "") + " Réessaie, ou prends un indice.")
+        st.error("Pas tout à fait." + (f" {brut(r['texte'])}" if r.get("texte") else "") + " Reprends ton raisonnement, ou demande un indice.")
 
 
 def carte(s: dict, cle_api: str, sauvegarder) -> None:
@@ -172,37 +172,35 @@ def carte(s: dict, cle_api: str, sauvegarder) -> None:
 
 def bilan(s: dict) -> None:
     st_ = s["stats"]
-    if not st.session_state.get("_ballons_montres"):
-        st.balloons()
-        st.session_state["_ballons_montres"] = True
-    st.markdown(f"## 🎉 Séance terminée : +{s['points']} points")
-    st.caption(f"🏆 Ton total : {S.total_points(s)} points")
+    # Lycée : pas d'effets de fête (ballons, confettis), un bilan sobre façon tableau de bord.
+    st.markdown("## Bilan de la séance")
+    st.caption(f"Score de la séance : {s['points']} pts · score cumulé : {S.total_points(s)} pts")
     c1, c2, c3 = st.columns(3)
     c1.metric("Exercices réussis", f"{st_['reussis']} / {st_['exercices']}")
     c2.metric("Sans aucune aide", st_["sans_aide"])
     c3.metric("Avec des indices", st_["avec_indices"])
     if s["badges_nouveaux"]:
-        st.success("Nouveaux badges : " + " · ".join(f"**{P.libelle(b)}**" for b in s["badges_nouveaux"]))
+        st.success("Jalons atteints : " + " · ".join(f"**{P.libelle(b)}**" for b in s["badges_nouveaux"]))
     st.info(brut(s["bilan"]))
     if s["profil"].get("modele"):
         # ADR 0002 : le tuteur n'a jamais résolu l'exercice de classe ; c'est maintenant à l'élève de le refaire.
-        st.markdown("#### 📸 À toi de jouer : refais ton exercice de classe")
+        st.markdown("#### Maintenant, refais ton exercice de classe")
         st.caption("Tu viens de t'entraîner sur la même méthode. Reprends-le seul, sans regarder les corrections.")
         st.text(s["profil"]["modele"])
-    with st.expander(f"🏅 Ma collection de badges ({len(S.badges(s))} sur {len(P.BADGES)})"):
+    with st.expander(f"Jalons ({len(S.badges(s))} sur {len(P.BADGES)})"):
         for b, (emoji, nom, comment) in P.BADGES.items():
             if b in S.badges(s):
                 st.markdown(f"{emoji} **{nom}** · {comment}")
             else:
-                st.markdown(f"🔒 {nom} · *{comment}*")
+                st.markdown(f"○ {nom} · *{comment}*")
 
 
 def feter_badges(s: dict) -> None:
-    """Annonce chaque nouveau badge une seule fois (décision Q10 : célébration)."""
+    """Signale chaque jalon atteint une seule fois, sobrement."""
     while s["a_feter"]:
         b = s["a_feter"].pop(0)
         emoji, nom, comment = P.BADGES[b]
-        st.toast(f"Nouveau badge : **{nom}** · {comment}", icon=emoji)
+        st.toast(f"Jalon atteint : **{nom}** · {comment}")
 
 
 def afficher(s: dict, cle_api: str, sauvegarder) -> None:

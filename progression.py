@@ -11,12 +11,13 @@ import json
 from collections import Counter
 
 # id : (emoji, nom, comment l'obtenir)
+# Lycée : des « jalons » au ton neutre plutôt que des badges de jeu. Identifiants inchangés.
 BADGES = {
-    "premier_sans_indice": ("🎯", "Premier sans indice", "Réussir un exercice sans aucune aide"),
-    "serie_5": ("🔥", "Série de 5", "Réussir 5 exercices d'affilée"),
-    "trois_formats": ("🎨", "Trois formats", "Réussir trois formats d'exercice différents dans une séance"),
-    "releve": ("💪", "Je me suis relevé·e", "Réussir un exercice juste après en avoir eu besoin de la correction"),
-    "seance_terminee": ("🏁", "Séance terminée", "Aller au bout d'une séance complète"),
+    "premier_sans_indice": ("◆", "Autonomie", "Réussir un exercice sans aucune aide"),
+    "serie_5": ("◆", "Régularité", "Réussir 5 exercices d'affilée"),
+    "trois_formats": ("◆", "Polyvalence", "Réussir trois types de questions différents dans une séance"),
+    "releve": ("◆", "Rebond", "Réussir un exercice juste après avoir eu besoin de la correction"),
+    "seance_terminee": ("◆", "Séance complète", "Aller au bout d'une séance"),
 }
 
 

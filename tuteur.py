@@ -23,8 +23,11 @@ Règles de fond :
 - Rigueur : vérifie chaque énoncé, chaque calcul et chaque corrigé avant de répondre. Un énoncé doit
   contenir toutes les données nécessaires et une seule réponse possible.
 - Niveau : respecte strictement la classe et le programme indiqués ; n'utilise aucune notion d'un niveau supérieur.
-- Ton : bienveillant, encourageant, vocabulaire accessible, sans infantiliser. Valorise une démarche précise
-  plutôt qu'un compliment générique.
+- Ton : celui d'un bon professeur de lycée : sobre, précis, respectueux. Tu parles à un lycéen comme à un
+  jeune adulte : pas d'exclamations en série, pas d'emojis, pas de formules enfantines (« Super ! », « Bravo champion »).
+  Valorise une démarche précise plutôt qu'un compliment générique.
+- Attendus du lycée et du bac : notations officielles, rédaction rigoureuse (justifier, conclure), vocabulaire
+  exact (« on en déduit », « d'après le théorème… »). Les énoncés ressemblent à ceux des DS et des sujets de bac.
 - Écriture des maths : PAS de LaTeX. Écris en Unicode lisible : π, ², ³, √, ×, ÷, ≈, ≤, ≥, ∞, ∈, ℝ, ln, eˣ, uₙ, ∫, Σ.
   Ex. « f′(x) = 2x − 3 », « u₍ₙ₊₁₎ = 0,8 × uₙ », « lim (x→+∞) e⁻ˣ = 0 ».
 - Français, phrases courtes."""
@@ -63,9 +66,9 @@ FIGURES = """"figure": null, OU une figure cotée si elle aide vraiment (géomé
   sauf si l'exercice consiste justement à lire le graphique."""
 
 NIVEAUX = {
-    "facile": "application directe en une étape, nombres simples",
-    "moyen": "deux étapes, ou une petite mise en situation",
-    "difficile": "plusieurs étapes, une réciproque ou un petit problème à décoder",
+    "facile": "application directe du cours en une étape",
+    "moyen": "niveau DS : deux ou trois étapes, ou une mise en situation à modéliser",
+    "difficile": "niveau bac : raisonnement en plusieurs étapes, réciproque, ou situation à modéliser puis interpréter",
 }
 
 PROMPT_EXERCICE = SOCLE + """
@@ -76,7 +79,7 @@ Réponds UNIQUEMENT avec un objet JSON :
 {{
  "format": "{format}",
  "notion": "la notion travaillée en 2 à 5 mots (ex. « volume du cône »)",
- "mission": "une phrase de mise en situation concrète et vivante (vie quotidienne, sport, économie, sciences…), différente des précédentes",
+ "mission": "le contexte de l'exercice en une ou deux phrases, réaliste et précis comme dans un sujet de bac (données plausibles), différent des précédents ; \"\" si l'énoncé est purement mathématique",
  "enonce": "la consigne, claire et complète, sans la solution",
  {specification}
  {figures},
@@ -108,7 +111,8 @@ Ta tâche : rédiger le bilan de fin de séance pour l'élève, en 5 lignes maxi
 - acquis observés ;
 - point à consolider ;
 - degré d'autonomie ;
-- prochaine étape recommandée.
+- prochaine étape recommandée, en lien avec les attendus du bac ou du prochain DS si l'objectif le précise.
+Ton sobre de professeur de lycée, sans emojis ni exclamations.
 Appuie-toi UNIQUEMENT sur les chiffres et résultats fournis par l'application, qui sont exacts.
 Ne conclus pas à une maîtrise durable à partir d'une seule séance. Termine sur une note encourageante et précise."""
 
@@ -162,18 +166,23 @@ def extraire_json(texte: str):
     return json.loads(texte[debut : fin + 1])
 
 
-CENTRES_INTERET = ("⚽ Sport", "🎮 Jeux vidéo", "🍳 Cuisine", "🎵 Musique", "🐾 Animaux", "🚀 Espace", "🎬 Films et séries", "👗 Mode", "🌳 Nature", "✈️ Voyages")
+# Lycée : des domaines liés aux spécialités et au projet d'orientation, pas des loisirs d'enfant.
+CENTRES_INTERET = ("Physique-chimie", "SVT et santé", "Économie et SES", "Informatique et data", "Ingénierie et technologie",
+                   "Environnement et climat", "Finance et gestion", "Sport et performance", "Architecture et design",
+                   "Géopolitique et démographie")
 
 
 def consigne_mission(profil: dict, rang: int) -> str:
-    """Mission (décision Q5) : habiller l'exercice avec un centre d'intérêt de l'élève, en alternant."""
-    interets = [i.split(" ", 1)[-1] for i in profil.get("interets") or []]
-    if not interets:
-        return "Mission : une situation concrète de la vie quotidienne d'un lycéen."
-    choisi = interets[rang % len(interets)]
+    """Contexte : situer l'exercice dans un domaine choisi par l'élève (spécialité, orientation), en alternant."""
+    domaines = list(profil.get("interets") or [])
+    if not domaines:
+        return ("Contexte : une situation réaliste comme dans un sujet de bac (sciences, économie, société), "
+                "ou un énoncé purement mathématique.")
+    choisi = domaines[rang % len(domaines)]
     return (
-        f"Mission : habille l'exercice avec ce centre d'intérêt de l'élève : {choisi.lower()}. "
-        "La situation doit rester réaliste et ne pas compliquer les maths."
+        f"Contexte : situe l'exercice dans ce domaine, lié à la spécialité ou au projet d'orientation de l'élève : "
+        f"{choisi.lower()}. Données plausibles et vocabulaire juste du domaine, comme dans un sujet de bac ; "
+        "le contexte ne doit pas compliquer les maths."
     )
 
 

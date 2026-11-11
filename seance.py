@@ -188,6 +188,6 @@ def terminer(s: dict, cle_api: str, sauvegarder=None) -> None:
             s["bilan"] = T.rediger_bilan(cle_api, s["profil"], s["stats"], s["resultats"])
         except T.TuteurIndisponible:
             st_ = s["stats"]
-            s["bilan"] = f"{st_['reussis']} exercice(s) réussi(s) sur {st_['exercices']}, dont {st_['sans_aide']} sans aide. Bravo pour ta séance !"
+            s["bilan"] = f"{st_['reussis']} exercice(s) réussi(s) sur {st_['exercices']}, dont {st_['sans_aide']} sans aide."
     if sauvegarder:
         sauvegarder(s)

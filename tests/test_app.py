@@ -79,7 +79,7 @@ def repondre_juste(at):
         at.text_area(key=f"{k}_ouv").input("36π contre 12π, donc 3 fois plus.").run()
         bouton(at, "Envoyer au tuteur").click().run()
     ok(at)
-    assert any("Bravo" in m.value for m in at.success), f"exercice {s['rang'] + 1} ({f}) non validé"
+    assert any("Juste" in m.value for m in at.success), f"exercice {s['rang'] + 1} ({f}) non validé"
     return f
 
 
@@ -112,7 +112,7 @@ def test_seance_complete_carte_de_jeu(base):
     assert "ouvert" in formats and len(set(formats)) == 6               # les six formats dans une séance de 10
     s = at.session_state["seance"]
     assert s["termine"] and s["stats"]["reussis"] == 10 and s["stats"]["sans_aide"] == 9
-    assert any("Séance terminée" in m.value for m in at.markdown)
+    assert any("Bilan de la séance" in m.value for m in at.markdown)
     # sauvegarde Supabase : résultats détaillés et chiffres du bilan
     ligne = base.tables["sessions"][0]
     contenu = json.loads(ligne["messages"])
@@ -235,23 +235,23 @@ def seance_complete(at, interets=()):
 
 def test_deux_seances_points_et_badges_cumules(base):
     at = lancer()
-    s1 = seance_complete(at, interets=["⚽ Sport"])
+    s1 = seance_complete(at, interets=["Physique-chimie"])
     assert "seance_terminee" in s1["badges_nouveaux"]
-    assert any("Nouveaux badges" in m.value for m in at.success)
-    assert "centre d'intérêt de l'élève : sport" in appels_de("écrire UN exercice")[0]["messages"][0]["content"]
+    assert any("Jalons atteints" in m.value for m in at.success)
+    assert "projet d'orientation de l'élève : physique-chimie" in appels_de("écrire UN exercice")[0]["messages"][0]["content"]
     enregistre = json.loads(base.tables["sessions"][0]["messages"])
-    assert enregistre["badges"] == s1["badges_nouveaux"] and enregistre["interets"] == ["⚽ Sport"]
+    assert enregistre["badges"] == s1["badges_nouveaux"] and enregistre["interets"] == ["Physique-chimie"]
 
     # Deuxième séance, même prénom : accueil personnalisé, total cumulé, badges non redonnés
     bouton(at.sidebar, "🗑️ Nouvelle séance").click().run()
     ok(at)
     at.text_input[0].input("Inès").run()
-    accueil = " ".join(m.value for m in at.success)
-    assert f"Tu as **{s1['points']} points**" in accueil and "Séance terminée" in accueil
+    accueil = " ".join(m.value for m in at.info)
+    assert f"score cumulé **{s1['points']} pts**" in accueil and "Séance complète" in accueil
     s2 = seance_complete(at)
     assert s2["points_avant"] == s1["points"]
     assert not set(s2["badges_nouveaux"]) & set(s1["badges_nouveaux"])
-    assert any(f"Ton total : {s1['points'] + s2['points']} points" in c.value for c in at.caption)
+    assert any(f"score cumulé : {s1['points'] + s2['points']} pts" in c.value for c in at.caption)
     assert len(base.tables["sessions"]) == 2                    # la deuxième séance est bien enregistrée
 
 
@@ -263,10 +263,10 @@ def test_espace_prof_vue_par_eleve(base):
     ok(at)
     vue = at.dataframe[0].value
     ligne = vue[vue["Élève"] == "Inès"].iloc[0]
-    assert ligne["Points"] == s["points"] and ligne["Séances"] == 1 and ligne["Sans aide"] == "100 %"
-    assert "🏁" in ligne["Badges"]
+    assert ligne["Score"] == s["points"] and ligne["Séances"] == 1 and ligne["Sans aide"] == "100 %"
+    assert "Séance complète" in ligne["Jalons"]
     detail = " ".join(m.value for m in at.markdown)
-    assert "**Réussis :** 6 / 6" in detail and "Badges gagnés" in detail
+    assert "**Réussis :** 6 / 6" in detail and "Jalons atteints" in detail
 
 
 # ───────────── Étape 4 : exercice modèle photographié (ADR 0002) ─────────────
@@ -369,8 +369,21 @@ def test_anciennes_seances_au_format_chat_sans_erreur(base):
     at = lancer()
     at.text_input[0].input("Léo").run()
     ok(at)
-    assert any("Bon retour Léo" in m.value and "0 points" in m.value for m in at.success)
+    assert any("Bon retour Léo" in m.value and "0 pts" in m.value for m in at.info)
     at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[1]).run()
     at.text_input[0].input("prof2024").run()
     ok(at)
     assert at.dataframe[0].value.iloc[0]["Élève"] == "Léo" and any("Léo" in e.label for e in at.expander)
+
+
+def test_objectif_bac_transmis_au_tuteur(base):
+    at = lancer()
+    at.text_input[0].input("Inès")
+    at.selectbox[0].set_value("Terminale (Spé Maths)").run()
+    at.selectbox[1].set_value("Logarithme népérien").run()
+    next(s for s in at.selectbox if s.label == "🎯 Tu prépares").set_value("Préparer le bac").run()
+    next(t for t in at.text_input if t.label == "Précision (facultatif)").input("bac blanc en mars").run()
+    bouton(at, "🚀 Commencer").click().run()
+    ok(at)
+    demande = appels_de("écrire UN exercice")[0]["messages"][0]["content"]
+    assert "Objectif de l'élève : Préparer le bac (bac blanc en mars)" in demande

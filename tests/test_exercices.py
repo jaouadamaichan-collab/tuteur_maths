@@ -114,7 +114,7 @@ def test_rotation_des_formats():
         formats.append(E.choisir_format(rang, formats, r))
     assert formats[:3] == ["qcm", "numerique", "vf"]
     assert all(a != b for a, b in zip(formats, formats[1:]))                       # jamais deux fois de suite
-    assert [i for i, f in enumerate(formats) if f == "ouvert"] == [7, 12, 17, 22, 27]  # 1 sur 5 à l'entraînement
+    assert [i for i, f in enumerate(formats) if f == "ouvert"] == list(range(5, 30, 3))  # lycée : 1 sur 3 à l'entraînement
     entrainement = formats[3:]
     comptes = {f: entrainement.count(f) for f in E.FORMATS_FERMES}
     assert max(comptes.values()) - min(comptes.values()) <= 1                         # usage équilibré

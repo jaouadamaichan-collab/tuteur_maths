@@ -21,13 +21,13 @@ NOMS_FORMATS = {
     "qcm": "QCM",
     "numerique": "Réponse numérique",
     "vf": "Vrai ou faux",
-    "trous": "Texte à trous",
-    "ordre": "Étapes dans l'ordre",
+    "trous": "Compléter le raisonnement",
+    "ordre": "Ordonner une démonstration",
     "ouvert": "Réponse rédigée",
 }
 # Diagnostic (3 exercices) : un prérequis, une application directe, une question de compréhension.
 FORMATS_DIAGNOSTIC = ("qcm", "numerique", "vf")
-FREQUENCE_OUVERT = 5  # environ un exercice d'entraînement sur cinq est une réponse rédigée
+FREQUENCE_OUVERT = 3  # lycée : environ un exercice d'entraînement sur trois est une réponse rédigée (attendus du bac)
 NIVEAUX = ("facile", "moyen", "difficile")
 ARRONDIS = {"unité": 1.0, "dixième": 0.1, "centième": 0.01, "exact": 0.0}
 TROU = "___"

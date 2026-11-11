@@ -62,6 +62,9 @@ PHOTO_THEME = "📸 Mon exercice de classe"
 AUTRE_THEME = "✏️ Un autre thème"
 MODES_THEME = [MODE_CHAPITRE, PHOTO_THEME, AUTRE_THEME]
 
+# Ce que l'élève prépare : oriente le niveau des exercices et le bilan (lycée : DS et bac).
+OBJECTIFS = ["Revoir une notion du cours", "Préparer un DS ou un contrôle", "Préparer le bac", "Aller plus loin"]
+
 PAYS_PROGRAMMES = [
     "France (Éducation Nationale)",
     "Belgique",
@@ -499,8 +502,8 @@ def synthese_par_eleve(sessions):
             "Élève": nom,
             "Classe": seances[0].get("classe", ""),
             "Séances": c["seances"],
-            "Points": c["points"],
-            "Badges": " ".join(P.BADGES[b][0] for b in c["badges"]),
+            "Score": c["points"],
+            "Jalons": ", ".join(P.BADGES[b][1] for b in c["badges"]),
             "Sans aide": f"{c['taux_sans_aide']} %" if c["taux_sans_aide"] is not None else "—",
             "Formats où il bloque": ", ".join(E.NOMS_FORMATS[f] for f in c["formats_difficiles"]) or "—",
             "Dernière séance": str(seances[0].get("date_session", ""))[:10],
@@ -553,7 +556,7 @@ def afficher_dashboard_prof():
                 st.markdown(
                     f"**Réussis :** {stats.get('reussis', 0)} / {stats.get('exercices', 0)} · "
                     f"**sans aide :** {stats.get('sans_aide', 0)} · **avec indices :** {stats.get('avec_indices', 0)} · "
-                    f"**correction vue :** {stats.get('correction_vue', 0)} · **points :** {contenu.get('points', 0)}"
+                    f"**correction vue :** {stats.get('correction_vue', 0)} · **score :** {contenu.get('points', 0)}"
                 )
                 difficiles = [E.NOMS_FORMATS[f] for f in stats.get("formats_difficiles") or [] if f in E.NOMS_FORMATS]
                 notions = stats.get("notions_difficiles") or []
@@ -563,7 +566,7 @@ def afficher_dashboard_prof():
                 st.markdown("**📸 Exercice modèle (transcription) :**")
                 st.text(contenu["modele"])
             if contenu.get("badges"):
-                st.markdown("**Badges gagnés :** " + " · ".join(P.libelle(b) for b in contenu["badges"] if b in P.BADGES))
+                st.markdown("**Jalons atteints :** " + " · ".join(P.libelle(b) for b in contenu["badges"] if b in P.BADGES))
             if bilan:
                 st.info(bilan)
 
@@ -578,7 +581,7 @@ def afficher_dashboard_prof():
                 "Chapitre": s.get("chapitre", "?"),
                 "Exercices": s.get("nb_exercices", 0),
                 "Sans aide": stats.get("sans_aide", "—"),
-                "Points": P.lire_contenu(s).get("points", "—"),
+                "Score": P.lire_contenu(s).get("points", "—"),
             })
         st.table(rows)
 
@@ -612,7 +615,7 @@ def main():
     with st.sidebar:
         st.markdown("# 🎓 Tuteur Maths")
         st.markdown("**Lycée · Seconde → Terminale**")
-        st.caption("Ton coach de maths personnel")
+        st.caption("Entraînement personnalisé")
         st.divider()
 
         page = st.radio(
@@ -631,7 +634,7 @@ def main():
             p = seance["profil"]
             st.markdown(f"👤 **{p['nom']}** · {p['classe']}")
             st.markdown(f"📖 {p['chapitre']}")
-            st.markdown(f"🏆 **{S.total_points(seance)} points** au total")
+            st.markdown(f"Score cumulé : **{S.total_points(seance)} pts**")
             collection = S.badges(seance)
             if collection:
                 st.markdown("  \n".join(P.libelle(b) for b in collection))
@@ -719,11 +722,14 @@ def main():
                     height=68,
                 ).strip()
             interets = st.multiselect(
-                "❤️ Ce que tu aimes (jusqu'à 3) : tes exercices seront des missions sur ces thèmes",
-                CENTRES_INTERET, max_selections=3, placeholder="Choisis 1 à 3 centres d'intérêt",
+                "🧭 Tes domaines (spécialités, projet d'orientation) : les exercices seront mis en contexte dans ces domaines",
+                CENTRES_INTERET, max_selections=3, placeholder="Facultatif : 1 à 3 domaines",
             )
             c3, c4 = st.columns(2)
-            objectif = c3.text_area("🎯 Objectif (facultatif)", placeholder="Ex: Réviser le second degré pour le DS", height=68)
+            with c3:
+                prepa = st.selectbox("🎯 Tu prépares", OBJECTIFS)
+                precision = st.text_input("Précision (facultatif)", placeholder="Ex: DS vendredi sur le discriminant").strip()
+            objectif = prepa + (f" ({precision})" if precision else "")
             with c4:
                 temps = st.select_slider("⏱️ Durée", options=list(E.EXERCICES_PAR_DUREE), value="30 min")
                 st.caption(f"{E.nombre_exercices(temps)} exercices")
@@ -732,10 +738,12 @@ def main():
             sessions_passees = charger_sessions_db(nom) if sb_ok and nom else []
             progression = charger_progression(nom) if sb_ok and nom else P.cumul([])
             if sessions_passees:
-                collection = " ".join(P.libelle(b) for b in progression["badges"])
-                st.success(
-                    f"🏆 Bon retour {nom} ! Tu as **{progression['points']} points** "
-                    f"en {progression['seances']} séance(s)." + (f"  \nTes badges : {collection}" if collection else "")
+                jalons = ", ".join(P.BADGES[b][1] for b in progression["badges"])
+                taux = progression["taux_sans_aide"]
+                st.info(
+                    f"Bon retour {nom}. **{progression['seances']} séance(s)** · score cumulé **{progression['points']} pts**"
+                    + (f" · {taux} % de réussite sans aide" if taux is not None else "")
+                    + (f"  \nJalons : {jalons}" if jalons else "")
                 )
             btn_start = st.button("🚀 Commencer la séance", use_container_width=True, type="primary")
 
@@ -772,19 +780,19 @@ def main():
             st.markdown("""<div class="welcome-card">
                 <div class="icon">🔍</div>
                 <h3>Diagnostic</h3>
-                <p>3 exercices rapides (QCM, calcul, vrai ou faux) pour savoir où tu en es.</p>
+                <p>3 questions courtes pour situer ton niveau sur le chapitre avant l'entraînement.</p>
             </div>""", unsafe_allow_html=True)
         with col2:
             st.markdown("""<div class="welcome-card">
                 <div class="icon">🎯</div>
                 <h3>Entraînement</h3>
-                <p>Des exercices variés et adaptés à ton niveau. Gagne des points, enchaîne les séries, demande un indice si tu bloques.</p>
+                <p>Des exercices variés, du niveau cours au niveau bac, dont des réponses à rédiger. Indices gradués si tu bloques.</p>
             </div>""", unsafe_allow_html=True)
         with col3:
             st.markdown("""<div class="welcome-card">
                 <div class="icon">📊</div>
                 <h3>Bilan</h3>
-                <p>Un résumé de tes progrès avec tes acquis et tes prochaines étapes.</p>
+                <p>Acquis, points à consolider et prochaine étape, en lien avec ton DS ou le bac.</p>
             </div>""", unsafe_allow_html=True)
 
         if sessions_passees:

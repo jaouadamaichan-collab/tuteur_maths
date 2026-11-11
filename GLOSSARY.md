@@ -1,6 +1,6 @@
 # Tuteur de maths — Collège
 
-Un tuteur qui fait progresser un lycéen (Seconde → Terminale) en mathématiques par des exercices courts, variés et ludiques, sans le démotiver.
+Un tuteur qui fait progresser un lycéen (Seconde → Terminale) en mathématiques par des exercices courts et variés, au niveau des attendus du bac, sur un ton sobre.
 
 ## Séance
 
@@ -32,9 +32,9 @@ _Avoid_ : photo de devoir, exercice importé
 Le texte de l'exercice modèle tel que le tuteur l'a lu sur la photo, confirmé par l'élève. Seule trace conservée d'un exercice modèle.
 _Avoid_ : description, lecture
 
-**Centres d'intérêt** :
-Les domaines que l'élève aime (sport, jeux vidéo, cuisine…), choisis dans son profil, qui servent à habiller les énoncés.
-_Avoid_ : passions, préférences, hobbies
+**Domaines** :
+Les domaines liés aux spécialités ou au projet d'orientation de l'élève (physique-chimie, économie, informatique…), choisis dans son profil, qui servent à mettre les énoncés en contexte.
+_Avoid_ : centres d'intérêt, passions, hobbies
 
 ## Exercices
 
@@ -62,9 +62,9 @@ _Avoid_ : schéma, image, illustration
 La bonne réponse d'un exercice à format fermé, fournie avec l'énoncé et cachée à l'élève, qui permet à l'app de corriger instantanément.
 _Avoid_ : corrigé, solution
 
-**Mission** :
-L'habillage d'un exercice en petite situation tirée des centres d'intérêt de l'élève (« Le glacier remplit des cornets… »).
-_Avoid_ : histoire, scénario, contexte
+**Contexte** :
+La situation réaliste dans laquelle un exercice est posé, comme dans un sujet de bac, tirée si possible des domaines de l'élève (« Une population de bactéries est modélisée par… »). Un énoncé peut aussi être purement mathématique.
+_Avoid_ : mission, histoire, scénario
 
 **Indice** :
 Une aide graduée que l'élève demande d'un clic pendant un exercice ; le dernier niveau est la correction.
@@ -72,25 +72,25 @@ _Avoid_ : aide, astuce, coup de pouce
 
 ## Progression
 
-**Points** :
-La récompense gagnée pour chaque exercice mené à son terme ; moins nombreux avec des indices, jamais nuls.
-_Avoid_ : XP, score, note
+**Score** :
+Les points gagnés pour chaque exercice mené à son terme ; moins nombreux avec des indices, jamais nuls.
+_Avoid_ : XP, note, récompense
 
-**Total** :
-La somme des points de toutes les séances d'un élève, rattachée à son prénom.
-_Avoid_ : score global, cumul, XP total
+**Score cumulé** :
+La somme des scores de toutes les séances d'un élève, rattachée à son prénom.
+_Avoid_ : total, XP total
 
 **Série** :
 Le nombre d'exercices réussis d'affilée.
 _Avoid_ : combo, streak
 
-**Badge** :
-Une distinction obtenue une seule fois, en franchissant une étape précise (par exemple un premier exercice sans indice).
-_Avoid_ : trophée, médaille, succès
+**Jalon** :
+Une étape de progression atteinte une seule fois (Autonomie, Régularité, Polyvalence, Rebond, Séance complète). Ton neutre : pas de récompense de jeu.
+_Avoid_ : badge, trophée, médaille
 
-**Collection** :
-L'ensemble des badges qu'un élève a obtenus depuis sa première séance.
-_Avoid_ : inventaire, palmarès
+**Objectif** :
+Ce que l'élève prépare (revoir une notion, un DS, le bac, aller plus loin), avec une précision libre ; il oriente le niveau des exercices et le bilan.
+_Avoid_ : but, cible
 
 **Réussite sans aide** :
 La part des exercices réussis sans indice ni correction ; l'indicateur d'autonomie suivi par le prof.

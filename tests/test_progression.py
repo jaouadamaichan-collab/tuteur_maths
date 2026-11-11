@@ -76,7 +76,7 @@ def test_cumul_vide():
 # ───────────── Dans la séance ─────────────
 
 PROFIL = {"nom": "Inès", "classe": "Première (Spé Maths)", "programme": "France", "chapitre": "Second degré",
-          "theme_libre": False, "objectif": "", "temps": "15 min", "interets": ["⚽ Sport", "🍳 Cuisine"]}
+          "theme_libre": False, "objectif": "", "temps": "15 min", "interets": ["Physique-chimie", "Économie et SES"]}
 
 
 @pytest.fixture(autouse=True)
@@ -129,9 +129,9 @@ def test_seance_arretee_avant_la_fin_sans_badge_seance_terminee():
 def test_centres_d_interet_transmis_en_alternance():
     s, _ = faire_seance()
     demandes = [a["messages"][0]["content"] for a in appels_de("écrire UN exercice")]
-    assert "centre d'intérêt de l'élève : sport" in demandes[0]
-    assert "centre d'intérêt de l'élève : cuisine" in demandes[1]
+    assert "projet d'orientation de l'élève : physique-chimie" in demandes[0]
+    assert "projet d'orientation de l'élève : économie et ses" in demandes[1]
 
 
 def test_sans_centre_d_interet_vie_quotidienne():
-    assert "vie quotidienne" in T.consigne_mission({"interets": []}, 0)
+    assert "sujet de bac" in T.consigne_mission({"interets": []}, 0)
