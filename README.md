@@ -1,15 +1,19 @@
 # 🎓 Tuteur de Maths IA
 
-Tuteur intelligent de mathématiques pour lycéens avec parcours personnalisé :  
-**Diagnostic → Entraînement ciblé → Bilan**
+Tuteur de mathématiques pour lycéens (Seconde → Terminale, spécialité maths).
+L'élève s'entraîne par **exercices courts, variés et ludiques** : **Diagnostic → Entraînement → Bilan**.
 
 ## Fonctionnalités
 
-- 🔍 **Diagnostic** — 3 exercices pour identifier les acquis
-- 🎯 **Entraînement adaptatif** — difficulté ajustée en temps réel
-- 📊 **Bilan de séance** — acquis, points à consolider, prochaine étape
-- 🗄️ **Historique persistant** — l'élève retrouve ses séances précédentes
-- 👩‍🏫 **Tableau de bord prof** — suivi de tous les élèves
+- 🧭 **Trois façons de choisir le thème** : un chapitre du programme, **📸 la photo d'un exercice fait en classe**, ou un thème libre
+- 🃏 **Six formats d'exercice** qui alternent (QCM, réponse numérique, vrai ou faux, texte à trous, étapes dans l'ordre, réponse rédigée), **corrigés instantanément par l'app** (ADR 0001)
+- 📈 **Figures dessinées par l'app** : solides, triangles, droites et **courbes de fonctions**, avec mesures vérifiées
+- 💡 **Indices gradués** puis correction ; question libre au tuteur, qui ne donne pas la réponse
+- ⭐ **Points, séries et badges** cumulés d'une séance à l'autre ; **missions** habillées selon les centres d'intérêt de l'élève
+- 📸 **Exercice modèle** : le tuteur lit la photo, l'élève vérifie le texte, puis s'entraîne sur des variantes. La photo n'est jamais enregistrée et l'exercice de classe n'est jamais résolu (ADR 0002)
+- 👩‍🏫 **Espace prof** : vue par élève (points, badges, part de réussite sans aide, formats où il bloque) et détail des séances
+
+Vocabulaire du projet : `GLOSSARY.md`. Décisions : `docs/adr/`.
 
 ## Installation rapide (local)
 
@@ -50,20 +54,22 @@ MOT_DE_PASSE_PROF = "ton_mot_de_passe_prof"
 
 ### 3. Partager
 
-- **URL élève** : partage l'URL Streamlit, l'élève choisit la page "Séance élève"
-- **URL prof** : même URL, le prof clique sur "Tableau de bord prof" et entre le mot de passe
+- **URL élève** : partage l'URL Streamlit, l'élève reste sur « Ma séance »
+- **URL prof** : même URL, le prof clique sur « Espace prof » et entre le mot de passe
 
 ## Structure
 
 ```
-tuteur-maths/
-├── app.py                 # Application principale
-├── requirements.txt       # Dépendances Python
-├── supabase_setup.sql     # Script de création de la table
-├── .gitignore
-├── .streamlit/
-│   └── config.toml        # Thème Streamlit
-└── README.md
+app.py              # Interface Streamlit : accueil, panneau, espace prof, sauvegarde Supabase
+seance.py           # Déroulé d'une séance (diagnostic, entraînement, points, badges, bilan)
+exercices.py        # Contrat d'exercice, correction par le code, calcul vérifié, barème
+figures.py          # Figures dessinées par l'app (solides, triangles, droites, courbes)
+tuteur.py           # Prompts et appels à l'API Claude
+progression.py      # Badges et cumul par élève
+modele.py           # Photo d'un exercice de classe : préparation et anti-copie
+ecran.py            # Carte d'exercice et bilan
+tests/              # pytest (IA et Supabase simulés) : python -m pytest
+supabase_setup.sql  # Table sessions (RLS, sans accès public)
 ```
 
 ## Technologies
