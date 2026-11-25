@@ -165,7 +165,7 @@ def test_espace_prof_affiche_la_seance(base):
     base.table("sessions").insert({"eleve_nom": "Inès", "classe": "Première (Spé Maths)", "chapitre": "Dérivation",
                                            "nb_exercices": 2, "phase_finale": "bilan", "bilan": "ok", "date_session": "2026-11-11T10:00:00"}).execute()
     at = lancer()
-    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[1]).run()
+    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[3]).run()
     at.text_input[0].input("prof2024").run()
     ok(at)
     assert any("Inès" in e.label for e in at.expander)
@@ -177,7 +177,7 @@ def test_espace_prof_affiche_la_seance(base):
 ])
 def test_sans_base_valide_l_espace_prof_explique_quoi_faire(base, secrets):
     at = lancer(secrets)
-    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[1]).run()
+    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[3]).run()
     assert "SUPABASE_KEY" in at.warning[0].value and "secrète" in at.warning[0].value
 
 
@@ -243,11 +243,11 @@ def test_deux_seances_points_et_badges_cumules(base):
     assert enregistre["badges"] == s1["badges_nouveaux"] and enregistre["interets"] == ["Physique-chimie"]
 
     # Deuxième séance, même prénom : accueil personnalisé, total cumulé, badges non redonnés
-    bouton(at.sidebar, "🗑️ Nouvelle séance").click().run()
+    bouton(at.sidebar, "＋ Nouvelle séance").click().run()
     ok(at)
     at.text_input[0].input("Inès").run()
-    accueil = " ".join(m.value for m in at.info)
-    assert f"score cumulé **{s1['points']} pts**" in accueil and "Séance complète" in accueil
+    accueil = " ".join(m.value for m in at.markdown)
+    assert f"Score {s1['points']} pts" in accueil and "Séance complète" in accueil and "Bon retour Inès" in accueil
     s2 = seance_complete(at)
     assert s2["points_avant"] == s1["points"]
     assert not set(s2["badges_nouveaux"]) & set(s1["badges_nouveaux"])
@@ -258,7 +258,7 @@ def test_deux_seances_points_et_badges_cumules(base):
 def test_espace_prof_vue_par_eleve(base):
     at = lancer()
     s = seance_complete(at)
-    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[1]).run()
+    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[3]).run()
     at.text_input[0].input("prof2024").run()
     ok(at)
     vue = at.dataframe[0].value
@@ -322,7 +322,7 @@ def test_photo_lue_verifiee_puis_seance_de_variantes(base):
     assert json.loads(ligne["messages"])["modele"] == corrige
     assert len(json.dumps(ligne, ensure_ascii=False)) < 20_000 and "base64" not in json.dumps(ligne)
     # L'espace prof montre la transcription
-    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[1]).run()
+    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[3]).run()
     at.text_input[0].input("prof2024").run()
     ok(at)
     assert any(corrige in t.value for t in at.text)
@@ -369,8 +369,8 @@ def test_anciennes_seances_au_format_chat_sans_erreur(base):
     at = lancer()
     at.text_input[0].input("Léo").run()
     ok(at)
-    assert any("Bon retour Léo" in m.value and "0 pts" in m.value for m in at.info)
-    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[1]).run()
+    assert any("Bon retour Léo" in m.value for m in at.markdown) and any("Score 0 pts" in m.value for m in at.markdown)
+    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[3]).run()
     at.text_input[0].input("prof2024").run()
     ok(at)
     assert at.dataframe[0].value.iloc[0]["Élève"] == "Léo" and any("Léo" in e.label for e in at.expander)
@@ -401,3 +401,219 @@ def test_exercice_vide_affiche_reessayer_au_lieu_de_planter(base):
     bouton(at, "Réessayer").click().run()
     ok(at)
     assert at.session_state["seance"]["exercice"] is not None
+
+
+# ───────────── Tableau de bord d'accueil ─────────────
+
+def _seance_enregistree(base, nom="Inès", chapitre="Second degré", jour=None, exercices=6, sans_aide=2):
+    from datetime import datetime as _dt
+    base.table("sessions").insert({
+        "eleve_nom": nom, "classe": "Première (Spé Maths)", "chapitre": chapitre, "nb_exercices": exercices, "phase_finale": "bilan",
+        "bilan": "ok", "date_session": f"{jour or _dt.now().date().isoformat()}T10:00:00",
+        "messages": json.dumps({"resultats": [], "points": 30, "badges": ["premier_sans_indice"],
+                                "stats": {"exercices": exercices, "reussis": exercices, "sans_aide": sans_aide}})}).execute()
+
+
+def test_accueil_serie_objectif_et_recommandation(base):
+    _seance_enregistree(base)
+    at = lancer()
+    at.text_input(key="prenom").input("Inès").run()
+    at.selectbox(key="classe").set_value("Première (Spé Maths)").run()
+    ok(at)
+    textes = " ".join(m.value for m in at.markdown)
+    assert "Série 1 jour" in textes and "6/10 exercices" in textes and "la journée d'aujourd'hui est comptée" in textes
+    assert "Second degré" in textes and "À consolider : 33 %" in textes        # 2 sur 6 sans aide
+    bouton(at, "▶ Lancer la séance").click().run()
+    ok(at)
+    s = at.session_state["seance"]
+    assert s["profil"]["chapitre"] == "Second degré" and s["nb_total"] == 6 and s["profil"]["nom"] == "Inès"
+
+
+def test_recommandation_sans_prenom_desactivee(base):
+    at = lancer()
+    assert bouton(at, "▶ Lancer la séance").disabled
+    assert any("Écris ton prénom" in c.value for c in at.caption)
+
+
+def test_refaire_un_chapitre(base):
+    _seance_enregistree(base, chapitre="Suites numériques", sans_aide=6)
+    at = lancer()
+    at.text_input(key="prenom").input("Inès").run()
+    bouton(at, "Refaire ce chapitre").click().run()
+    ok(at)
+    assert at.session_state["seance"]["profil"]["chapitre"] == "Suites numériques"
+    assert not at.session_state["seance"]["profil"]["theme_libre"]
+
+
+def test_page_ma_progression(base):
+    _seance_enregistree(base)
+    at = lancer()
+    at.text_input(key="prenom").input("Inès").run()
+    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[2]).run()
+    ok(at)
+    textes = " ".join(m.value for m in at.markdown)
+    assert "Ma progression" in textes and "◆ Autonomie" in textes and "🔒 Régularité" in textes
+    assert at.dataframe[0].value.iloc[0]["Chapitre"] == "Second degré"
+
+
+def test_prenom_avec_html_affiche_comme_texte(base):
+    at = lancer()
+    at.text_input(key="prenom").input("<b>Léa</b>").run()
+    ok(at)
+    salut = next(m.value for m in at.markdown if "Bonjour" in m.value)
+    assert "&lt;b&gt;Léa&lt;/b&gt;" in salut and "<b>Léa</b>" not in salut
+
+
+def test_prenom_garde_d_une_page_a_l_autre_et_apres_une_seance(base):
+    at = lancer()
+    at.text_input(key="prenom").input("Inès").run()
+    at.selectbox(key="classe").set_value("Terminale (Spé Maths)").run()
+    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[2]).run()
+    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[0]).run()
+    assert at.text_input(key="prenom").value == "Inès" and at.selectbox(key="classe").value == "Terminale (Spé Maths)"
+    bouton(at, "🚀 Commencer").click().run()
+    bouton(at.sidebar, "＋ Nouvelle séance").click().run()
+    ok(at)
+    assert at.text_input(key="prenom").value == "Inès" and at.selectbox(key="classe").value == "Terminale (Spé Maths)"
+
+
+# ───────────── Flashcards ─────────────
+
+def aller_flashcards(at):
+    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[1]).run()
+    ok(at)
+
+
+def reviser(at, notes):
+    """Retourne et note les cartes une à une (True : Je savais, False : À revoir)."""
+    for sue in notes:
+        bouton(at, "🔄 Retourner la carte").click().run()
+        ok(at)
+        bouton(at, "✅ Je savais" if sue else "🔁 À revoir").click().run()
+        ok(at)
+
+
+def test_flashcards_de_bout_en_bout(base):
+    at = lancer()
+    at.text_input(key="prenom").input("Inès").run()
+    at.selectbox(key="classe").set_value("Première (Spé Maths)").run()
+    aller_flashcards(at)
+    assert at.selectbox(key="classe_cartes").value == "Première (Spé Maths)"
+    at.selectbox(key="chapitre_cartes").set_value("Second degré").run()
+    assert not any("Sur ta dernière séance" in m.value for m in at.markdown)     # aucune séance encore
+    at.button_group(key="nb_cartes_autre").set_value(5).run()
+    bouton(at, "✨ Créer les cartes").click().run()
+    ok(at)
+    assert "Nombre de cartes : 5" in appels_de("écrire des flashcards")[0]["messages"][0]["content"]
+    r = at.session_state["revision"]
+    assert len(r["cartes"]) == 5 and any("Question" in m.value for m in at.markdown)
+    bouton(at, "🔄 Retourner la carte").click().run()
+    assert any('class="reponse"' in m.value for m in at.markdown)
+    bouton(at, "🔁 À revoir").click().run()
+    reviser(at, [True, True, True, True])
+    assert any("revient" in c.value for c in at.caption)          # la carte « à revoir » repasse
+    reviser(at, [False])
+    assert any("Série terminée : +8 points" in m.value for m in at.markdown)
+    ligne = base.tables["sessions"][0]
+    contenu = json.loads(ligne["messages"])
+    assert ligne["chapitre"] == "🃏 Second degré" and ligne["nb_exercices"] == 0 and contenu["type"] == "flashcards"
+    assert sum(not c["sue"] for c in contenu["cartes"]) == 1
+
+    # Retour sur la page : la carte ratée est dans la pile « à revoir »
+    bouton(at, "🃏 Autres cartes").click().run()
+    assert any('class="pile-nombre">1<' in m.value for m in at.markdown)
+    bouton(at, "Réviser mes 1 cartes").click().run()
+    assert len(at.session_state["revision"]["cartes"]) == 1
+    reviser(at, [True])
+    bouton(at, "🃏 Autres cartes").click().run()
+    assert any('class="pile-nombre">0<' in m.value for m in at.markdown)   # sue : elle sort de la pile
+
+
+def test_flashcards_arreter_la_serie_et_ne_rien_enregistrer_si_rien_vu(base):
+    at = lancer()
+    aller_flashcards(at)
+    bouton(at, "✨ Créer les cartes").click().run()
+    bouton(at, "Arrêter la série").click().run()
+    ok(at)
+    assert any("Série arrêtée" in m.value for m in at.markdown)
+    assert base.tables.get("sessions", []) == []
+
+
+def test_flashcards_tuteur_indisponible(base):
+    FauxClaude.indisponible = True
+    at = lancer()
+    aller_flashcards(at)
+    bouton(at, "✨ Créer les cartes").click().run()
+    ok(at)
+    assert any("ne répond pas" in e.value for e in at.error) and at.session_state["revision"] is None
+
+
+def test_raccourci_flashcards_depuis_l_accueil_et_seances_recentes_sans_flashcards(base):
+    base.table("sessions").insert({
+        "eleve_nom": "Inès", "classe": "Première (Spé Maths)", "chapitre": "🃏 Second degré", "nb_exercices": 0, "phase_finale": "flashcards",
+        "bilan": "", "date_session": "2026-11-24T10:00:00",
+        "messages": json.dumps({"type": "flashcards", "resultats": [], "stats": {}, "points": 4,
+                                "cartes": [{"recto": "Formule de l'aire du disque ?", "verso": "π × r²", "figure": None, "sue": False}]})}).execute()
+    at = lancer()
+    at.text_input(key="prenom").input("Inès").run()
+    textes = " ".join(m.value for m in at.markdown)
+    assert "1 carte à revoir" in textes and "Tes dernières séances" not in textes
+    bouton(at, "Réviser avec des flashcards").click().run()
+    ok(at)
+    assert at.sidebar.radio[0].value == at.sidebar.radio[0].options[1]
+
+
+def demande_de_cartes():
+    return appels_de("écrire des flashcards")[-1]["messages"][0]["content"]
+
+
+def test_bilan_de_seance_cree_les_flashcards_sur_ce_theme(base):
+    at = lancer()
+    seance_complete(at)                                     # séance sur « Second degré »
+    bouton(at, "🃏 Réviser ce thème en flashcards").click().run()
+    ok(at)
+    assert at.sidebar.radio[0].value == at.sidebar.radio[0].options[1]
+    r = at.session_state["revision"]
+    assert r is not None and r["profil"]["chapitre"] == "Second degré" and r["profil"]["classe"] == "Première (Spé Maths)"
+    assert "chapitre « Second degré »" in demande_de_cartes() and "Nombre de cartes : 10" in demande_de_cartes()
+
+
+def test_page_flashcards_propose_la_derniere_seance_par_defaut(base):
+    _seance_enregistree(base, chapitre="Suites numériques")
+    at = lancer()
+    at.text_input(key="prenom").input("Inès").run()
+    aller_flashcards(at)
+    assert any("Sur ta dernière séance" in m.value and "Suites numériques" in m.value for m in at.markdown)
+    at.button_group(key="nb_cartes").set_value(15).run()
+    bouton(at, "✨ Réviser ce thème en flashcards").click().run()
+    ok(at)
+    assert "chapitre « Suites numériques »" in demande_de_cartes() and "Nombre de cartes : 15" in demande_de_cartes()
+
+
+def test_flashcards_sur_une_autre_thematique_ecrite(base):
+    _seance_enregistree(base, chapitre="Suites numériques")
+    at = lancer()
+    at.text_input(key="prenom").input("Inès").run()
+    aller_flashcards(at)
+    at.button_group(key="mode_cartes").set_value("✏️ Un autre thème").run()
+    bouton(at, "✨ Créer les cartes").click().run()
+    assert any("Écris ta thématique" in w.value for w in at.warning) and at.session_state["revision"] is None
+    at.text_area(key="theme_cartes").input("Dérivation : tangente et sens de variation").run()
+    bouton(at, "✨ Créer les cartes").click().run()
+    ok(at)
+    assert "thème libre décrit par l'élève" in demande_de_cartes() and "tangente et sens de variation" in demande_de_cartes()
+
+
+def test_flashcards_apres_une_seance_sur_photo_gardent_l_exercice_modele(base):
+    base.table("sessions").insert({
+        "eleve_nom": "Inès", "classe": "Première (Spé Maths)", "chapitre": "📸 hauteur et volume du cône", "nb_exercices": 6,
+        "phase_finale": "bilan", "bilan": "ok", "date_session": "2026-11-24T10:00:00",
+        "messages": json.dumps({"resultats": [], "points": 30, "badges": [], "stats": {"exercices": 6, "sans_aide": 4},
+                                "modele": "Un cône a pour rayon 6 cm et pour génératrice 10 cm."})}).execute()
+    at = lancer()
+    at.text_input(key="prenom").input("Inès").run()
+    aller_flashcards(at)
+    assert any("ton exercice de classe" in m.value for m in at.markdown)
+    bouton(at, "✨ Réviser ce thème en flashcards").click().run()
+    ok(at)
+    assert "exercice modèle" in demande_de_cartes() and "Un cône a pour rayon 6 cm" in demande_de_cartes()

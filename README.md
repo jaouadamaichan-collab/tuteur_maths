@@ -13,6 +13,8 @@ L'élève s'entraîne par **exercices courts et variés, au niveau des attendus 
 - 🧭 **Contextes réalistes** tirés des domaines de l'élève (spécialités, projet d'orientation : physique-chimie, économie, informatique…)
 - 📈 **Score et jalons** cumulés d'une séance à l'autre (Autonomie, Régularité, Polyvalence, Rebond), sans effets de jeu
 - 📸 **Exercice modèle** : le tuteur lit la photo, l'élève vérifie le texte, puis s'entraîne sur des variantes. La photo n'est jamais enregistrée et l'exercice de classe n'est jamais résolu (ADR 0002)
+- 🏠 **Tableau de bord** : série de jours, objectif du jour (10 exercices type DS ou bac), séance recommandée sur le chapitre le plus fragile, dernières séances à refaire, page « Ma progression »
+- 🃏 **Flashcards** : par défaut sur le thème de la dernière séance (ou une autre thématique) ; l'élève retourne chaque carte et note « Je savais » ou « À revoir » ; les cartes à revoir sont gardées
 - 👩‍🏫 **Espace prof** : vue par élève (score, jalons, part de réussite sans aide, formats où il bloque) et détail des séances
 
 Vocabulaire du projet : `GLOSSARY.md`. Décisions : `docs/adr/`.
@@ -56,7 +58,7 @@ MOT_DE_PASSE_PROF = "ton_mot_de_passe_prof"
 
 ### 3. Partager
 
-- **URL élève** : partage l'URL Streamlit, l'élève reste sur « Ma séance »
+- **URL élève** : partage l'URL Streamlit, l'élève reste sur « Aujourd'hui »
 - **URL prof** : même URL, le prof clique sur « Espace prof » et entre le mot de passe
 
 ## Structure
